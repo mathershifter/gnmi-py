@@ -6,7 +6,6 @@ import argparse
 from gnmi.session import Session
 from gnmi.structures import Target
 
-from pprint import pprint
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -58,7 +57,7 @@ def main():
             
             #print(str(path), update.get_value())
 
-    for l in results:
-        print(f"{l[0]}\t{l[1]}\t{l[2]}")
+    for res in results:
+        print(f"{res[0]}\t{res[1]}\t{res[2]}")
 if __name__ == "__main__":
     main()

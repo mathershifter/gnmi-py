@@ -2,8 +2,7 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-from gnmi.proto.gnmi_pb2 import Path
-from gnmi.messages import Notification_, SetResponse_, Update_, Path_
+from gnmi.messages import Notification_, SetResponse_
 from gnmi.exceptions import GrpcDeadlineExceeded
 from typing import Any, Generator, List, Tuple
 

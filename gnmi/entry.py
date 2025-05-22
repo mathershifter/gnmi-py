@@ -4,7 +4,6 @@
 
 import argparse
 import json
-import os
 import signal
 import sys
 
@@ -14,7 +13,7 @@ from google.protobuf import __version__ as pb_version
 from gnmi.config import Config
 from gnmi.messages import Notification_
 from gnmi.session import Session
-from gnmi.structures import CertificateStore, GetOptions, GrpcOptions, SubscribeOptions
+from gnmi.structures import CertificateStore, GetOptions, SubscribeOptions
 from gnmi.exceptions import GrpcDeadlineExceeded
 from gnmi.target import Target
 from gnmi import util
@@ -146,9 +145,6 @@ def make_config(args) -> Config:
         
         if args.timeout:
             _operation["options"]["timeout"] = args.timeout
-        
-        if args.use_alias:
-            _operation["options"]["use_alias"] = args.use_alias
 
     elif operation_name == "Replace":
         pass

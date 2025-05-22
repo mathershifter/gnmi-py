@@ -1,5 +1,4 @@
 import typing as t
-from urllib.parse import urlparse, ParseResult
 import re
 class Target:
 

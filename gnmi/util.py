@@ -7,10 +7,8 @@ import os
 import re
 import pathlib
 
-from urllib.parse import urlparse, ParseResult
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
 
-import google.protobuf as _
 import gnmi.proto.gnmi_pb2 as pb  # type: ignore
 
 from gnmi.environments import GNMI_RC_PATH

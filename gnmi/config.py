@@ -52,7 +52,6 @@ class ConfigElem(Mapping):
         this = self.dump()
         
         def _merge(a, b):
-            
             for (key, value) in b.items():
                 if isinstance(value, dict):
                     # get node or create one
@@ -68,9 +67,7 @@ class ConfigElem(Mapping):
         _merge(this, other)
 
         return Config(this)
-        
 
-    
     @classmethod
     def _loader(cls, name, value):
 

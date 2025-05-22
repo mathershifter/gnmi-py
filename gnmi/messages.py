@@ -22,10 +22,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
-import google.protobuf as _
 import grpc
 
-from gnmi.environments import GNMI_NO_DEPRECATED, GNMI_RC_PATH
+from gnmi.environments import GNMI_NO_DEPRECATED
 from gnmi.exceptions import GnmiDeprecationError
 from gnmi.proto import gnmi_pb2 as pb  # type: ignore
 from gnmi import util
@@ -157,7 +156,8 @@ class Update_(BaseMessage):
         typed_value = pb.TypedValue()
 
         type_: Optional[str] = forced_type
-        func = lambda v: v
+        
+        func = None
         
         if forced_type:
             func = cls._TYPE_HANDLER_MAP.get(forced_type, lambda v: v)
@@ -286,7 +286,6 @@ class Path_(IterableMessage):
         if not path:
             return cls(pb.Path(origin=None, elem=[])) # type: ignore
         
-        names: List[str] = []
         elems: list = []
         
         path = path.strip()

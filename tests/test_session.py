@@ -5,8 +5,6 @@ from gnmi.session import Session
 from gnmi.messages import Path_, Update_
 from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
 from gnmi.target import Target
-from gnmi import util
-from os import replace
 
 pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 
@@ -36,7 +34,7 @@ def session(target, certificates):
 
 def test_cap(session):
     resp = session.capabilities()
-
+    assert len(resp.supported_encodings) 
 
 def test_get(session, paths):
     resp = session.get(paths, options={})
@@ -50,14 +48,12 @@ def test_get(session, paths):
 
 def test_sub(session, paths):
     
-    with pytest.raises(GrpcDeadlineExceeded) as exc:
+    with pytest.raises(GrpcDeadlineExceeded):
         for resp in session.subscribe(paths, options={"timeout": 2}):
             if resp.sync_response:
                 continue
-            prefix = resp.update.prefix
             for update in resp.update.updates:
-                path = prefix + update.path
-                #print(str(path), update.value)
+                pass
 
 def test_sub_sync_response(session, paths):
     for resp in session.subscribe(paths):
@@ -79,7 +75,7 @@ def test_set(session):
         ("/system/config/hostname", 1.1),
     ]
 
-    with pytest.raises(GrpcError) as err:
+    with pytest.raises(GrpcError):
         rsps = session.set(replacements=invalid)
     
     #assert rsps.collect()[0].op.name == "INVALID"

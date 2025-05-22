@@ -2,16 +2,12 @@
 # Copyright (c) 2021 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-import os
-from functools import partial
 import pytest
 
-from gnmi.messages import CapabilitiesResponse_, GetResponse_, Path_, Update_
-from gnmi.exceptions import GrpcDeadlineExceeded
-from gnmi import capabilites, get, delete, replace, update, subscribe
+from gnmi.messages import CapabilitiesResponse_, Path_, Update_
+from gnmi import capabilites, get, replace, update, subscribe
 
-from tests.conftest import GNMI_AUTH, GNMI_TARGET, certificates, is_insecure
-from tests.conftest import GNMI_CERT_CHAIN, GNMI_PRIVAE_KEY, GNMI_ROOT_CERT 
+from tests.conftest import GNMI_AUTH, GNMI_TARGET
 
 pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 
@@ -28,9 +24,9 @@ def test_get(is_insecure, certificates):
         insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH)
 
     for notif in resp:
-        for update in notif.update:
-            assert str(update.path) == "/system/config/hostname"
-            assert isinstance(update.get_value(), str)
+        for u in notif.update:
+            assert str(u.path) == "/system/config/hostname"
+            assert isinstance(u.get_value(), str)
 
 def test_subscribe(is_insecure, certificates):
     resp = subscribe(GNMI_TARGET,
@@ -57,15 +53,12 @@ def test_subscribe(is_insecure, certificates):
 
 
 def test_set(is_insecure, certificates, request):
-     
-    path = "/system/config/hostname"
-    
     def _get_hostname():
         resp = get(GNMI_TARGET, ["/system/config/hostname"], insecure=is_insecure,
             certificates=certificates, auth=GNMI_AUTH)
         for notif in resp:
-            for update in notif:
-                return update.get_value()
+            for u in notif:
+                return u.get_value()
     
     hostname = _get_hostname()
     

@@ -10,7 +10,6 @@ Implementation if gnmi.session API
 """
 
 import grpc
-import google.protobuf as _
 from gnmi.proto import gnmi_pb2 as pb  # type: ignore
 from gnmi.proto import gnmi_pb2_grpc  # type: ignore
 
@@ -300,7 +299,6 @@ class Session(object):
         submode = util.get_gnmi_constant(options.get("submode") or "on-change")
         suppress = bool(options.get("suppress"))
         timeout = options.get("timeout")
-        use_alias = bool(options.get("use_alias"))
 
         subs = []
         for path in paths:

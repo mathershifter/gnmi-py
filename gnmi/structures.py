@@ -2,9 +2,7 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-from ssl import OP_ALL
 from typing import Dict, Optional, Tuple, Any, TypedDict
-from gnmi.messages import Path_
 
 Auth = Tuple[str, Optional[str]]
 
@@ -34,7 +32,6 @@ class SubscribeOptions(Options, total=False):
     submode: str
     suppress: bool
     timeout: Optional[int]
-    use_alias: bool
 
 class GrpcOptions(TypedDict, total=False):
     server_host_override: str
