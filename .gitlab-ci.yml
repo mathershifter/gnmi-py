@@ -8,6 +8,8 @@ variables:
 
 stages:
   - analysis
+  - test
+  - build
 
 uv:
   stage: analysis
