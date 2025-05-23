@@ -10,12 +10,11 @@ subscribe:
     options:
         aggregate: false
         encoding: "json"
-        # heartbeat =
         mode: "on-change"
-        # qos = 0
-        #use_aliases: false 
-        # interval =
         submode: "stream"
         suppress: false
+        # heartbeat =
+        # qos = 0
+        # interval =
         #timeout =
 

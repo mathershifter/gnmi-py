@@ -8,18 +8,19 @@ target = "192.168.56.103:50010"
 
 for notif in get(target, paths, auth=("admin", "")):
     prefix = notif.prefix
-    
+
     for u in notif.updates:
         print(f"{prefix + u.path} = {u.get_value()}")
-    
+
     for d in notif.deletes:
         print(f"{prefix + d} = DELETED")
 
-for notif in subscribe(target, paths, auth=("admin", ""),
-                       options=SubscribeOptions(mode="once")):
+for notif in subscribe(
+    target, paths, auth=("admin", ""), options=SubscribeOptions(mode="once")
+):
     prefix = notif.prefix
     for u in notif.updates:
         print(f"{prefix + u.path} = {u.get_value()}")
-    
+
     for d in notif.deletes:
         print(f"{prefix + d} = __DELETED__")

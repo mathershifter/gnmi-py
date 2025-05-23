@@ -1,6 +1,6 @@
-
 import os
-from typing import Tuple
+
+import typing as t
 
 import pytest
 
@@ -13,7 +13,7 @@ GNMI_PASS: str = os.environ.get("GNMI_PASS", "")
 GNMI_ROOT_CERT: str = os.environ.get("GNMI_ROOT_CERT", "/dev/null")
 GNMI_PRIVAE_KEY: str = os.environ.get("GNMI_PRIVAE_KEY", "/dev/null")
 GNMI_CERT_CHAIN: str = os.environ.get("GNMI_CERT_CHAIN", "/dev/null")
-GNMI_AUTH: Tuple[str, str] = (GNMI_USER, GNMI_PASS)
+GNMI_AUTH: tuple[str, str] = (GNMI_USER, GNMI_PASS)
 
 
 @pytest.fixture(scope="session")

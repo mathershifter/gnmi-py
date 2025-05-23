@@ -2,26 +2,12 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-from typing import List, Final
-
+import typing as t
 import grpc
 
-DEFAULT_GRPC_PORT: Final[int] = 6030
-DEFAULT_GRPC_HOST: Final[str] = "localhost"
+DEFAULT_GRPC_PORT: t.Final[int] = 6030
+DEFAULT_GRPC_HOST: t.Final[str] = "localhost"
 
-GNMIRC_FILES: Final[List[str]] =  [".gnmirc", "_gnmirc"]
+GNMIRC_FILES: t.Final[list[str]] = [".gnmirc", "_gnmirc"]
 
-GRPC_CODE_MAP: Final[dict] = {x.value[0]: x for x in grpc.StatusCode}
-
-MODE_MAP: Final[List[str]] = [
-    "stream",
-    "once",
-    "poll"
-]
-
-DATA_TYPE_MAP: Final[List[str]] = [
-    "all",
-    "config",
-    "state",
-    "operational"
-]
+GRPC_CODE_MAP: t.Final[dict] = {x.value[0]: x for x in grpc.StatusCode} # type: ignore

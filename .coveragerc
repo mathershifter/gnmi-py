@@ -1,5 +1,4 @@
 [run]
 omit =
        */.venv/*
-       */gnmi/proto/*
        */tests/*

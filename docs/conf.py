@@ -12,15 +12,16 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath(".."))
 
 import gnmi
 
 # -- Project information -----------------------------------------------------
 
-project = 'gNMI-py'
-copyright = '2025, Arista Inc'
-author = 'Jesse Mather'
+project = "gNMI-py"
+copyright = "2025, Arista Inc"
+author = "Jesse Mather"
 
 # The full version, including alpha/beta/rc tags
 version = gnmi.__version__
@@ -37,12 +38,12 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
-    "sphinx.ext.viewcode"
+    "sphinx.ext.viewcode",
 ]
 
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 # pygments_style = "flask_theme_support.FlaskyStyle"
 
 todo_include_todos = True
@@ -50,18 +51,18 @@ todo_include_todos = True
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 add_module_names = True
 
-master_doc = 'index'
+master_doc = "index"
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = "alabaster"
 
 html_theme_options = {
     "show_powered_by": False,

@@ -25,14 +25,18 @@ python3 -m grpc_tools.protoc \
   --proto_path=${WORKDIR} \
   --python_out=${WORKDIR} \
   --grpc_python_out=${WORKDIR} \
+  --pyi_out=${WORKDIR} \
   gnmi.proto gnmi_ext.proto status.proto
+  # --mypy_out=${WORKDIR} \
 
 echo "Fixing python imports..."
 sed -i '' 's/import gnmi_pb2/from . import gnmi_pb2/' ${WORKDIR}/gnmi_pb2_grpc.py
+#sed -i '' 's/import gnmi_pb2/from . import gnmi_pb2/' ${WORKDIR}/gnmi_pb2_grpc.pyi
 sed -i '' 's/import gnmi_ext_pb2/from . import gnmi_ext_pb2/' ${WORKDIR}/gnmi_pb2.py
+sed -i '' 's/import gnmi_ext_pb2/from . import gnmi_ext_pb2/' ${WORKDIR}/gnmi_pb2.pyi
 
 echo "Copying modules to project..."
-cp ${WORKDIR}/*.py gnmi/proto/
+cp ${WORKDIR}/*.py* gnmi/proto/
 
 echo "Cleaning up..."
 rm ${WORKDIR}/*

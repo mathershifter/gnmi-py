@@ -9,9 +9,7 @@ description = "Python gNMI client"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "grpcio==1.62.3",
-    "grpcio-tools==1.62.3",
-    "protobuf==4.25.1",
+    "grpcio==1.71.0",
 ]
 
 [build-system]
@@ -19,11 +17,65 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
-dev = [
-    "grpcio-tools>=1.30.0",
+test = [
+    "grpc-stubs>=1.53.0.6",
+    "mypy>=1.15.0",
     "pytest>=8.3.5",
+    "ruff>=0.11.10",
+    "tox>=4.26.0",
+    "types-protobuf>=6.30.2.20250516",
+    "types-pyyaml>=6.0.12.20250516",
+]
+dev = [
+    {include-group = "test"},
+    "grpcio-tools==1.71.0",
+    "protobuf<6.0",
     "sphinx>=7.4.7",
 ]
 
 [project.scripts]
 gnmipy = "gnmi:entry.main"
+
+[project.optional-dependencies]
+all = [
+    "pyyaml>=6.0.2",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "gnmi.__version__"}
+
+[tool.ruff]
+exclude = [
+    "gnmi/proto",
+]
+
+[tool.tox]
+requires = ["tox>=4.26"]
+env_list = ["3.9", "ruff"]
+
+[tool.tox.env_run_base]
+deps = ["pytest"]
+description = "Run test under {base_python}"
+commands = [["pytest"]]
+
+[tool.tox.env.ruff]
+description = "lint source code"
+deps = ["ruff"]
+commands = [
+    ["ruff", "check", "."],
+    ["ruff", "format", "--check", "."]
+]
+
+[tool.mypy]
+#python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+exclude = [
+    "proto",
+    "^proto/.*\\.py$"
+]
+
+[[tool.mypy.overrides]]
+module = ["gnmi.proto.*"]
+ignore_errors = true

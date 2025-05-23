@@ -4,7 +4,7 @@
 
 import pytest
 
-from gnmi.messages import CapabilitiesResponse_, Path_, Update_
+from gnmi.messages import CapabilityResponse_, Path_, Update_
 from gnmi import capabilites, get, replace, update, subscribe
 
 from tests.conftest import GNMI_AUTH, GNMI_TARGET
@@ -13,33 +13,44 @@ pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 
 
 def test_discover(is_insecure, certificates):
-    response = capabilites(GNMI_TARGET,
-        insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH)
+    response = capabilites(
+        GNMI_TARGET, insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH
+    )
 
-    assert isinstance(response, CapabilitiesResponse_), "Invalid response"
+    assert isinstance(response, CapabilityResponse_), "Invalid response"
+
 
 def test_get(is_insecure, certificates):
-
-    resp = get(GNMI_TARGET, paths=["/system/config/hostname"],
-        insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH)
+    resp = get(
+        GNMI_TARGET,
+        paths=["/system/config/hostname"],
+        insecure=is_insecure,
+        certificates=certificates,
+        auth=GNMI_AUTH,
+    )
 
     for notif in resp:
         for u in notif.update:
             assert str(u.path) == "/system/config/hostname"
             assert isinstance(u.get_value(), str)
 
+
 def test_subscribe(is_insecure, certificates):
-    resp = subscribe(GNMI_TARGET,
+    resp = subscribe(
+        GNMI_TARGET,
         paths=["/system/processes/process", "/interfaces/interface"],
-        insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH,
-        options={"timeout": 2})
-    
+        insecure=is_insecure,
+        certificates=certificates,
+        auth=GNMI_AUTH,
+        options={"timeout": 2},
+    )
+
     seen = {}
     for notif in resp:
         for u in notif:
             if isinstance(u, Update_):
                 path = str(u.path)
-                if path.startswith("/system/processes/process"): 
+                if path.startswith("/system/processes/process"):
                     seen["/system/processes/process"] = True
 
                 if path.startswith("/interfaces/interface"):
@@ -54,35 +65,51 @@ def test_subscribe(is_insecure, certificates):
 
 def test_set(is_insecure, certificates, request):
     def _get_hostname():
-        resp = get(GNMI_TARGET, ["/system/config/hostname"], insecure=is_insecure,
-            certificates=certificates, auth=GNMI_AUTH)
+        resp = get(
+            GNMI_TARGET,
+            ["/system/config/hostname"],
+            insecure=is_insecure,
+            certificates=certificates,
+            auth=GNMI_AUTH,
+        )
         for notif in resp:
             for u in notif:
                 return u.get_value()
-    
+
     hostname = _get_hostname()
-    
+
     def _rollback():
         hostname_ = _get_hostname()
         if hostname_ != hostname:
-            update(GNMI_TARGET, updates=[("/system/config/hostname", hostname)],
-                insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH)
-    
+            update(
+                GNMI_TARGET,
+                updates=[("/system/config/hostname", hostname)],
+                insecure=is_insecure,
+                certificates=certificates,
+                auth=GNMI_AUTH,
+            )
+
     request.addfinalizer(_rollback)
-        
-    updates = [
-        ("/system/config/hostname", "minemeow")
-    ]
-    gen = update(GNMI_TARGET, updates=updates,
-        insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH)
+
+    updates = [("/system/config/hostname", "minemeow")]
+    gen = update(
+        GNMI_TARGET,
+        updates=updates,
+        insecure=is_insecure,
+        certificates=certificates,
+        auth=GNMI_AUTH,
+    )
     for r in gen:
         pass
 
-    replacements = [
-        ("/system/config", {"hostname": hostname})
-    ]
-    gen = replace(GNMI_TARGET, replacements=replacements,
-        insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH)
+    replacements = [("/system/config", {"hostname": hostname})]
+    gen = replace(
+        GNMI_TARGET,
+        replacements=replacements,
+        insecure=is_insecure,
+        certificates=certificates,
+        auth=GNMI_AUTH,
+    )
 
     for r in gen:
         pass

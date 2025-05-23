@@ -1,17 +1,17 @@
 metadata:
-    username = "admin"
-    password = ""
+    username: admin
+    password: ""
 
 get:
     options:
-        encoding: "json"
+        encoding: json
 
 subscribe:
     options:
         aggregate: false
-        encoding: "json"
-        mode: "stream"
-        submode: "on-change"
+        encoding: json
+        mode: stream
+        submode: on-change
         suppress: true
         # qos: 0 
         # interval:

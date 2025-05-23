@@ -17,20 +17,17 @@ def parse_args():
 
 def main():
     args = parse_args()
-    #print(args)
+    # print(args)
     host, port = args.target.split(":")
     target: Target = (host, int(port))
 
-    metadata = {
-        "username": "admin",
-        "password": ""
-    }
+    metadata = {"username": "admin", "password": ""}
 
     results = []
 
     sess = Session(target, metadata=metadata)
 
-    sub = sess.subscribe(args.paths) #,options=SubscribeOptions(mode="once"))
+    sub = sess.subscribe(args.paths)  # ,options=SubscribeOptions(mode="once"))
 
     for sr in sub:
         if sr.sync_response:
@@ -39,25 +36,26 @@ def main():
         prefix = sr.update.prefix
 
         for e in prefix.element:
-            results.append((str(prefix), type(prefix.raw).__name__, "element"))
+            results.append((str(prefix), type(prefix.pb()).__name__, "element"))
             # break
 
         if sr.error:
-            results.append((str(prefix), type(sr.raw).__name__, "error"))
+            results.append((str(prefix), type(sr.pb()).__name__, "error"))
 
         for update in sr.update.updates:
-                
             path = prefix + update.path
             for e in path.element:
-                results.append((str(path), type(path.raw).__name__, "element"))
+                results.append((str(path), type(path.pb()).__name__, "element"))
                 break
-            
+
             if update.value:
-                results.append((str(path), type(update.raw).__name__, "value"))
-            
-            #print(str(path), update.get_value())
+                results.append((str(path), type(update.pb()).__name__, "value"))
+
+            # print(str(path), update.get_value())
 
     for res in results:
         print(f"{res[0]}\t{res[1]}\t{res[2]}")
+
+
 if __name__ == "__main__":
     main()

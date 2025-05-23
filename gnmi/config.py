@@ -2,25 +2,29 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
+import pathlib
+import typing as t
+
 from collections.abc import Mapping
-from typing import Any
+
 
 YAML_SUPPORTED: bool = False
 
 try:
     import yaml
+
     YAML_SUPPORTED = True
 except ImportError:
     pass
 
-#TOML_SUPPORTED: bool = False
+# TOML_SUPPORTED: bool = False
 # try:
 #     import toml
 # except ImportError:
 #     pass
 
-class ConfigElem(Mapping):
 
+class ConfigElem(Mapping):
     def __init__(self, data: dict):
         self.raw = data
         self._data = dict(ConfigElem._loader(k, v) for k, v in data.items())
@@ -31,13 +35,13 @@ class ConfigElem(Mapping):
     def __len__(self):
         return len(self._data)
 
-    def __getitem__(self, name: str) -> Any:
+    def __getitem__(self, name: str) -> t.Any:
         if name in self._data:
             return self._data[name]
-    
-    def __getattr__(self, name: str) -> Any:
+
+    def __getattr__(self, name: str) -> t.Any:
         return self[name]
-    
+
     def dump(self):
         data = {}
         for key, elem in self._data.items():
@@ -50,9 +54,9 @@ class ConfigElem(Mapping):
         if isinstance(other, ConfigElem):
             other = other.dump()
         this = self.dump()
-        
+
         def _merge(a, b):
-            for (key, value) in b.items():
+            for key, value in b.items():
                 if isinstance(value, dict):
                     # get node or create one
                     node = a.setdefault(key, {})
@@ -70,7 +74,6 @@ class ConfigElem(Mapping):
 
     @classmethod
     def _loader(cls, name, value):
-
         if isinstance(value, dict):
             return name, cls(value)
         elif isinstance(value, (list, tuple)):
@@ -84,16 +87,16 @@ class ConfigElem(Mapping):
         else:
             return name, value
 
+
 class Config(ConfigElem):
-    
     @classmethod
-    def load_file(cls, file):
+    def load_file(cls, file: t.Union[pathlib.Path, str]):
         # if not YAML_SUPPORTED:
         #     raise ValueError("pyyaml module missing")
         with open(file, "r") as fh:
             data = cls.load(fh.read())
         return data
-    
+
     @classmethod
     def load(cls, data: str):
         if not YAML_SUPPORTED:

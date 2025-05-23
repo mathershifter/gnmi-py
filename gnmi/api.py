@@ -4,44 +4,50 @@
 
 from gnmi.messages import Notification_, SetResponse_
 from gnmi.exceptions import GrpcDeadlineExceeded
-from typing import Any, Generator, List, Tuple
-
+import typing as t
 from gnmi.session import Session
-from gnmi.structures import Auth, CertificateStore, GetOptions, Metadata
-from gnmi.structures import Options, SubscribeOptions, GrpcOptions
+from gnmi.structures import Auth, CertificateStore, GetOptions
+from gnmi.structures import Options, SubscribeOptions
 from gnmi.target import Target
 
 __all__ = ["capabilites", "delete", "get", "replace", "subscribe", "update"]
 
-def _new_session(target: str,
-        auth: Auth = None,
-        insecure: bool = False,
-        certificates: CertificateStore = {},
-        override: str = None):
-    
-    target = Target.from_url(target)
 
-    metadata: Metadata = {}
-    if auth:
-        username, password = auth
-        metadata = {
-            "username": username,
-            "password": password
-        }
+def _new_session(
+    target: str,
+    auth: Auth = ("", ""),
+    insecure: bool = False,
+    certificates: CertificateStore = {},
+    override: str = "",
+):
+    target_ = Target.from_url(target)
+
+    metadata: dict[str, str] = {}
     
-    grpc_options: GrpcOptions = {}
+    username, password = auth
+    if username:
+        metadata = {"username": username, "password": password or ""}
+
+    grpc_options: dict = {}
     if override:
         grpc_options["server_host_override"] = override
-    
-    return Session(target, metadata=metadata, certificates=certificates,
-                insecure=insecure, grpc_options=grpc_options)
+
+    return Session(
+        target_,
+        metadata=metadata,
+        certificates=certificates,
+        insecure=insecure,
+        grpc_options=grpc_options,
+    )
 
 
-def capabilites(target: str, 
-        auth: Auth = None,
-        insecure: bool = False,
-        certificates: CertificateStore = {},
-        override: str = None):
+def capabilites(
+    target: str,
+    auth: Auth = ("", None),
+    insecure: bool = False,
+    certificates: CertificateStore = {},
+    override: str = "",
+):
     """
     Get supported models and encodings from target
 
@@ -62,13 +68,15 @@ def capabilites(target: str,
     return sess.capabilities()
 
 
-def get(target: str,
-        paths: list,
-        auth: Auth = None,
-        insecure: bool = False,
-        certificates: CertificateStore = {},
-        override: str = None,
-        options: GetOptions = {}) -> Generator[Notification_, None, None]:
+def get(
+    target: str,
+    paths: list,
+    auth: Auth = ("", None),
+    insecure: bool = False,
+    certificates: CertificateStore = {},
+    override: str = "",
+    options: GetOptions = {},
+) -> t.Iterable[Notification_]:
     """
     Get path(s) from target
 
@@ -80,7 +88,7 @@ def get(target: str,
         ...     for update in notif.updates:
         ...         print(update.path, update.get_value())
         ...     for path in notif.deletes:
-        ...         print(str(path)) 
+        ...         print(str(path))
 
     :param target: gNMI target
     :type target: str
@@ -101,13 +109,15 @@ def get(target: str,
         yield notif
 
 
-def subscribe(target: str,
-        paths: list,
-        auth: Auth = None,
-        insecure: bool = False,
-        certificates: CertificateStore = {},
-        override: str = None,
-        options: SubscribeOptions = {}) -> Generator[Notification_, None, None]:
+def subscribe(
+    target: str,
+    paths: list,
+    auth: Auth = ("", None),
+    insecure: bool = False,
+    certificates: CertificateStore = {},
+    override: str = "",
+    options: SubscribeOptions = {},
+) -> t.Iterable[Notification_]:
     """
     Subscribe to updates from target
 
@@ -121,7 +131,7 @@ def subscribe(target: str,
         ...         for update in update.updates:
         ...             print(update.path, update.get_value())
         ...         for path in update.deletes:
-        ...             print(str(path))  
+        ...             print(str(path))
 
     :param target: gNMI target
     :type target: str
@@ -148,13 +158,15 @@ def subscribe(target: str,
         pass
 
 
-def delete(target: str,
-        deletes: List[str] = [],
-        auth: Auth = None,
-        insecure: bool = False,
-        certificates: CertificateStore = {},
-        override: str = None,
-        options: Options = {}) -> SetResponse_:
+def delete(
+    target: str,
+    deletes: list[str] = [],
+    auth: Auth = ("", None),
+    insecure: bool = False,
+    certificates: CertificateStore = {},
+    override: str = "",
+    options: Options = {},
+) -> SetResponse_:
     """
     Delete paths from the target
 
@@ -176,17 +188,21 @@ def delete(target: str,
     :param options: Subscribe options
     :type options: gnmi.structures.SubscribeOptions
     """
+
     sess = _new_session(target, auth, insecure, certificates, override)
-    return sess.set(deletes=deletes, options=options)
+    rsp: SetResponse_ = sess.set(deletes=deletes, options=options)
+    return rsp
 
 
-def replace(target: str,
-        replacements: List[Tuple[str, Any]] = [],
-        auth: Auth = None,
-        insecure: bool = False,
-        certificates: CertificateStore = {},
-        override: str = None,
-        options: Options = {}) -> SetResponse_:
+def replace(
+    target: str,
+    replacements: list[tuple[str, t.Any]] = [],
+    auth: Auth = ("", None),
+    insecure: bool = False,
+    certificates: CertificateStore = {},
+    override: str = "",
+    options: Options = {},
+) -> SetResponse_:
     """
     Replace paths on the target
 
@@ -209,16 +225,19 @@ def replace(target: str,
     :type options: gnmi.structures.SubscribeOptions
     """
     sess = _new_session(target, auth, insecure, certificates, override)
-    return sess.set(replacements=replacements, options=options)
+    rsp: SetResponse_ = sess.set(replacements=replacements, options=options)
+    return rsp
 
 
-def update(target: str,
-        updates: List[Tuple[str, Any]] = [],
-        auth: Auth = None,
-        insecure: bool = False,
-        certificates: CertificateStore = {},
-        override: str = None,
-        options: Options = {}) -> SetResponse_:
+def update(
+    target: str,
+    updates: list[tuple[str, t.Any]] = [],
+    auth: Auth = ("", None),
+    insecure: bool = False,
+    certificates: CertificateStore = {},
+    override: str = "",
+    options: Options = {},
+) -> SetResponse_:
     """
     Update paths on the target
 
@@ -241,4 +260,5 @@ def update(target: str,
     :type options: gnmi.structures.SubscribeOptions
     """
     sess = _new_session(target, auth, insecure, certificates, override)
-    return sess.set(updates=updates, options=options)
+    rsp: SetResponse_ = sess.set(updates=updates, options=options)
+    return rsp

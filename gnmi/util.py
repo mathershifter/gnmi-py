@@ -7,26 +7,32 @@ import os
 import re
 import pathlib
 
-from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
-
-import gnmi.proto.gnmi_pb2 as pb  # type: ignore
+import typing as t
+import gnmi.proto.gnmi_pb2 as pb # type: ignore
 
 from gnmi.environments import GNMI_RC_PATH
 from gnmi.config import Config
 from gnmi.constants import GNMIRC_FILES
 
-RE_PATH_COMPONENT = re.compile(r'''
+RE_PATH_COMPONENT = re.compile(
+    r"""
 ^
 (?P<name>[^[]+)
 (?P<keyval>\[.*\])?$
-''', re.VERBOSE)
+""",
+    re.VERBOSE,
+)
 
-def enable_grpc_debuging() -> NoReturn:
-    os.environ['GRPC_TRACE'] = 'all'
-    os.environ['GRPC_VERBOSITY'] = 'DEBUG'
 
-def get_gnmi_constant(name: str) -> int:
-    return getattr(pb, name.replace("-", "_").upper())
+def enable_grpc_debuging():
+    os.environ["GRPC_TRACE"] = "all"
+    os.environ["GRPC_VERBOSITY"] = "DEBUG"
+
+
+def get_gnmi_constant(name: str) -> t.Any: #pb.SubscriptionMode:
+    mode = getattr(pb, name.replace("-", "_").upper())
+    return mode
+
 
 def load_rc() -> Config:
     rc = Config({})
@@ -34,23 +40,21 @@ def load_rc() -> Config:
     for name in GNMIRC_FILES:
         fil = path / name
         if fil.exists():
-            return Config.load_file(fil)
+            rc = Config.load_file(fil)
+            break
+    
     return rc
 
-def parse_duration(duration: str) -> Optional[int]:
 
-    multipliers = {
-        "n": 1,
-        "u": 1000,
-        "m": 1000000,
-        "ms": 1000000,
-        "s": 1000000000
-    }
+def parse_duration(duration: str) -> t.Optional[int]:
+    multipliers = {"n": 1, "u": 1000, "m": 1000000, "ms": 1000000, "s": 1000000000}
 
     if duration is None:
         return None
 
-    match = re.match(r'(?P<value>\d+)(?P<unit>[a-z]+)?', duration)
+    match = re.match(r"(?P<value>\d+)(?P<unit>[a-z]+)?", duration)
+    if match is None:
+        return None
 
     val = int(match.group("value"))
     unit = match.group("unit") or "m"
@@ -61,13 +65,15 @@ def parse_duration(duration: str) -> Optional[int]:
     return val * multipliers[unit]
 
 
-def parse_path(path: str) -> List[Dict[str, Any]]:
+def parse_path(path: str) -> list[dict[str, t.Any]]:
     parsed = []
     elems = [re.sub(r"\\", "", name) for name in re.split(r"(?<!\\)/", path) if name]
 
     for elem in elems:
         keys = {}
         match = RE_PATH_COMPONENT.search(elem)
+        if match is None:
+            continue
         name = match.group("name")
         keyvals = match.group("keyval")
         if keyvals:
@@ -76,18 +82,20 @@ def parse_path(path: str) -> List[Dict[str, Any]]:
                 keys[key] = val
 
         parsed.append(dict(name=name, keys=keys))
-    
+
     return parsed
 
-def prepare_metadata(data: Union[dict, tuple]) -> List[Tuple[str, str]]:
+
+def prepare_metadata(data: dict[str, t.Any]) -> list[tuple[str, str]]:
     # normailize metadata to a list of tuples
-    ndata = []
+    # ndata = []
+    # for key, val in data.items():
+    #     ndata.append((key, str(val)))
+    
+    return [(k, str(v)) for k, v in data.items()]
 
-    for key, val in data.items():
-        ndata.append((key, val))
-    return [(k, v) for k,v in data.items()]
 
-def escape_string(string: str, escape: list) -> str:
+def escape_string(string: str, escape: str) -> str:
     result = ""
     for character in string:
         if character in tuple(escape) + ("\\",):
@@ -95,5 +103,6 @@ def escape_string(string: str, escape: list) -> str:
         result += character
     return result
 
-def datetime_from_int64(timestamp: int) -> datetime:
+
+def datetime_from_int64(timestamp: int) -> datetime.datetime:
     return datetime.datetime.fromtimestamp(timestamp // 1000000000)

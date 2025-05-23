@@ -2,37 +2,36 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-from typing import Dict, Optional, Tuple, Any, TypedDict
+import typing as t
 
-Auth = Tuple[str, Optional[str]]
+Auth = tuple[str, t.Optional[str]]
 
-Metadata = Dict[str, Any]
-
-
-class CertificateStore(TypedDict, total=False):
+class CertificateStore(t.TypedDict, total=False):
     certificate_chain: bytes
     private_key: bytes
     root_certificates: bytes
 
-class Options(TypedDict, total=False):
-    prefix: Any
+
+class Options(t.TypedDict, total=False):
+    prefix: t.Any
     encoding: str
     extension: list
+
 
 class GetOptions(Options, total=False):
     type: str
     use_models: list
 
+
 class SubscribeOptions(Options, total=False):
     aggregate: bool
-    heartbeat: Optional[int]
-    interval: Optional[int]
+    heartbeat: t.Optional[int]
+    interval: t.Optional[int]
     mode: str
     qos: int
     submode: str
     suppress: bool
-    timeout: Optional[int]
+    timeout: t.Optional[int]
 
-class GrpcOptions(TypedDict, total=False):
+class GrpcOptions(t.TypedDict, total=False):
     server_host_override: str
-    
