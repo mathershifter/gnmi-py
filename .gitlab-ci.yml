@@ -16,6 +16,7 @@ uv:
     - uv sync --frozen
 
 uv-install:
+  stage: .pre
   variables:
     UV_CACHE_DIR: .uv-cache
   cache:
