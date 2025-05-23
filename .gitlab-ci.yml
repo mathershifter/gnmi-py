@@ -28,11 +28,6 @@ uv-install:
     - uv sync --frozen
     - uv cache prune --ci
 
-# before_script:
-#   - python --version ; pip --version  # For debugging
-#   - python -m venv .venv
-#   - source .venv/bin/activate
-
 test:
   script:
     - ruff format --diff
