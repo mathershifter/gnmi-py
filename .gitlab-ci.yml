@@ -28,9 +28,9 @@ uv:
 
 test:
   script:
-    - ruff format --diff
-    - ruff check
-    - pytest tests/
+    - uv run --group test ruff format --diff
+    - uv run --group test ruff check
+    - uv run --group test pytest tests/
 
 build:
   script:
