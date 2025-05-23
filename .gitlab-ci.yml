@@ -1,5 +1,5 @@
 variables:
-  UV_VERSION: 0.5
+  UV_VERSION: 0.6
   PYTHON_VERSION: 3.9
   BASE_LAYER: alpine
   # GitLab CI creates a separate mountpoint for the build directory,
@@ -35,17 +35,19 @@ uv-install:
 
 test:
   script:
-    - pip install ruff tox  # you can also use tox
-    - pip install --editable ".[test]"
-    - tox -e py,ruff
+    - ruff format --diff
+    - ruff check
+    - pytest tests/
 
-run:
+build:
   script:
-    - pip install .
-    # run the command here
+    - uv build
   artifacts:
     paths:
       - build/*
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: always
 
 # pages:
 #   script:
