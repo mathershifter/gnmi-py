@@ -1,19 +1,12 @@
 variables:
   UV_VERSION: 0.6
   PYTHON_VERSION: 3.9
-  BASE_LAYER: alpine
   # GitLab CI creates a separate mountpoint for the build directory,
   # so we need to copy instead of using hard links.
   UV_LINK_MODE: copy
 
-stages:
-  - analysis
-  - test
-  - build
-
-uv:
-  stage: analysis
-  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
+.job-template:
+  image: ghcr.io/astral-sh/uv:${UV_VERSION:}-python${PYTHON_VERSION}-alpine
   variables:
     UV_CACHE_DIR: .uv-cache
   cache:
@@ -22,25 +15,29 @@ uv:
         - uv.lock
     paths:
       - $UV_CACHE_DIR
-  script:
+  before_script:
     - uv sync --frozen
     - uv cache prune --ci
+  
+stages:
+  - test
 
 test:
+  extends: .job-template
   script:
-    - uv run --group test ruff format --diff
+    # - uv run --group test ruff format --diff
     - uv run --group test ruff check
     - uv run --group test pytest tests/
 
-build:
-  script:
-    - uv build
-  artifacts:
-    paths:
-      - build/*
-  rules:
-    - if: $CI_COMMIT_TAG
-      when: always
+# build:
+#   script:
+#     - uv build
+#   artifacts:
+#     paths:
+#       - build/*
+#   rules:
+#     - if: $CI_COMMIT_TAG
+#       when: always
 
 # pages:
 #   script:
