@@ -6,7 +6,7 @@ variables:
   UV_LINK_MODE: copy
 
 .job-template:
-  image: ghcr.io/astral-sh/uv:${UV_VERSION:}-python${PYTHON_VERSION}-alpine
+  image: ghcr.io/astral-sh/uv:${UV_VERSION}-python${PYTHON_VERSION}-alpine
   variables:
     UV_CACHE_DIR: .uv-cache
   cache:
