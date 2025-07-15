@@ -553,3 +553,5 @@ MigrationBackup/
 report.xml
 
 .scratch*
+
+.idea

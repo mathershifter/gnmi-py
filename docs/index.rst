@@ -18,13 +18,13 @@ API
 
    api
 
-Messages
+Modelss
 ===================
 
 .. toctree::
    :maxdepth: 2
 
-   messages
+   models
 
 Session 
 ===================

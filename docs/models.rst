@@ -1,5 +1,5 @@
 Messages
 ------------
 
-.. automodule:: gnmi.messages
+.. automodule:: gnmi.models
     :inherited-members:
