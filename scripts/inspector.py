@@ -4,7 +4,6 @@
 
 import argparse
 from gnmi.session import Session
-from gnmi.structures import Target
 
 
 def parse_args():
@@ -17,15 +16,12 @@ def parse_args():
 
 def main():
     args = parse_args()
-    # print(args)
-    host, port = args.target.split(":")
-    target: Target = (host, int(port))
 
     metadata = {"username": "admin", "password": ""}
 
     results = []
 
-    sess = Session(target, metadata=metadata)
+    sess = Session(args.target, metadata=metadata)
 
     sub = sess.subscribe(args.paths)  # ,options=SubscribeOptions(mode="once"))
 
@@ -35,21 +31,21 @@ def main():
 
         prefix = sr.update.prefix
 
-        for e in prefix.element:
-            results.append((str(prefix), type(prefix.pb()).__name__, "element"))
+        for p in prefix.element:
+            results.append((str(prefix), type(p.encode()).__name__, "element"))
             # break
 
         if sr.error:
-            results.append((str(prefix), type(sr.pb()).__name__, "error"))
+            results.append((str(prefix), type(sr.encode()).__name__, "error"))
 
         for update in sr.update.updates:
             path = prefix + update.path
             for e in path.element:
-                results.append((str(path), type(path.pb()).__name__, "element"))
+                results.append((str(path), type(e.encode()).__name__, "element"))
                 break
 
             if update.value:
-                results.append((str(path), type(update.pb()).__name__, "value"))
+                results.append((str(path), type(update.encode()).__name__, "value"))
 
             # print(str(path), update.get_value())
 

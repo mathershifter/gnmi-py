@@ -34,7 +34,7 @@ dev = [
 ]
 
 [project.scripts]
-gnmipy = "gnmi:entry.main"
+gnmip = "gnmi:entry.main"
 
 [project.optional-dependencies]
 all = [

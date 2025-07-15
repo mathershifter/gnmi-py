@@ -11,6 +11,7 @@ Implementation if gnmi.session API
 # import enum
 
 import grpc
+from dataclasses import dataclass
 
 from gnmi.proto import gnmi_pb2 as pb # type: ignore
 from gnmi.proto import gnmi_pb2_grpc # type: ignore
@@ -18,35 +19,32 @@ from gnmi.proto import gnmi_pb2_grpc # type: ignore
 import typing as t
 import ssl
 
-from collections import defaultdict
-
 from gnmi import util
-from gnmi.messages import CapabilityRequest_, CapabilityResponse_, GetResponse_, Path_, Status_
-from gnmi.messages import Update_
-from gnmi.messages import SubscribeResponse_, SetResponse_
-from gnmi.structures import CertificateStore, Options
-from gnmi.structures import GetOptions, SubscribeOptions
+
+from gnmi.models import (
+    CapabilityResponse,
+    Path,
+    Status,
+    GetResponse,
+    SetResponse,
+    Subscription,
+    SubscribeResponse,
+    Target,
+    Update,
+    Value,
+    ValueType)
+
 from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
-from gnmi.target import Target
 
-SUBSCRIPTION_LIST_MODE_MAP: t.Final[dict[str, pb.SubscriptionList.Mode]] = defaultdict(
-    lambda: pb.SubscriptionList.STREAM,
-    {
-        "stream": pb.SubscriptionList.STREAM,
-        "once": pb.SubscriptionList.ONCE,
-        "poll": pb.SubscriptionList.POLL,
-    }
-)
+BasicAuth = tuple[str, str]
 
-GET_DATA_TYPE_MAP: t.Final[dict[str, pb.GetRequest.DataType]] = defaultdict(
-    lambda: pb.GetRequest.ALL,
-    {
-        "all": pb.GetRequest.ALL,
-        "config": pb.GetRequest.CONFIG,
-        "state": pb.GetRequest.STATE,
-        "operational": pb.GetRequest.OPERATIONAL,
-    }
-)
+@dataclass
+class TLSConfig:
+    ca_cert: bytes
+    cert: bytes
+    key: bytes
+    get_server_cert: bool = False
+
 
 class Session(object):
     r"""Represents a gNMI session
@@ -61,38 +59,45 @@ class Session(object):
 
     def __init__(
         self,
-        target: Target,
-        metadata: dict = {},
+        target: str,
+        metadata: t.Optional[dict] = None,
         insecure: bool = False,
-        certificates: CertificateStore = {},
-        grpc_options: dict = {},
+        tls: t.Optional[TLSConfig] = None,
+        grpc_options: t.Optional[dict] = None,
     ):
-        self._certificates = certificates
-        self._grpc_options = grpc_options
+        self.target = Target(address=target)
+        self._tls = tls
+
+        if grpc_options is None:
+            self._grpc_options = {}
+        else:
+            self._grpc_options = grpc_options
+
         self._insecure = insecure
-        self.target = target
         self.metadata = util.prepare_metadata(metadata)
 
         self._channel = self._new_channel()
 
         self._stub = gnmi_pb2_grpc.gNMIStub(self._channel) # type: ignore
 
-    # @property
-    # def hostaddr(self):
-    #     return "%s:%d" % self.target
-
     def _new_channel(self):
-        if self._insecure:
-            return grpc.insecure_channel(str(self.target))
+        starget = f"{self.target.address.host}:{self.target.address.port}"
 
-        elif not self._certificates.get("root_certificates"):
+        if self._insecure:
+            return grpc.insecure_channel(starget)
+
+        if not self._tls:
+            raise ValueError("no certificates specified, use 'insecure' to bypass")
+
+        if self._tls.get_server_cert:
+            # TODO: investigate/test this, add cli option
             creds = grpc.ssl_channel_credentials(
-                ssl.get_server_certificate(self.target.addr).encode()
+                ssl.get_server_certificate(self.target.address.host_port).encode()
             )
         else:
-            root_cert = self._certificates.get("root_certificates") or None
-            chain = self._certificates.get("certificate_chain") or None
-            private_key = self._certificates.get("private_key") or None
+            root_cert = self._tls.ca_cert or None
+            chain = self._tls.cert or None
+            private_key = self._tls.key or None
 
             creds = grpc.ssl_channel_credentials(
                 root_certificates=root_cert,
@@ -100,39 +105,42 @@ class Session(object):
                 certificate_chain=chain,
             )
 
-        tgt = ":".join([str(x) for x in self.target.addr])
+        # tgt = ":".join([str(x) for x in self.target])
         return grpc.secure_channel(
-            tgt, creds, options=list(self._grpc_options.items())
+            starget, creds, options=list(self._grpc_options.items())
         )
 
-    def _build_path(self, path: t.Union[str,Path_]) -> pb.Path:
-        if isinstance(path, Path_):
-            return path.pb()
-        return Path_.from_string(path).pb()
-    
-    def _build_update(self, update: t.Union[tuple[str, t.Any],Update_]) -> pb.Update:
-        if isinstance(update, Update_):
-            return update.pb()
-        return Update_.from_keyval(update).pb()
-
-    def _parse_path(
-        self, path: t.Optional[t.Union[Path_, pb.Path, str, list, tuple]]
-    ) -> pb.Path:
-        if path is None:
-            path = ""
-        elif isinstance(path, (list, tuple)):
-            path = "/".join(list(path))
-
-        if isinstance(path, str):
-            return Path_.from_string(path).pb()
-        elif isinstance(path, Path_):
-            return path.pb()
-        elif isinstance(path, pb.Path):
+    @staticmethod
+    def _build_path(path: t.Union[str, Path, pb.Path]) -> pb.Path:
+        if isinstance(path, pb.Path):
             return path
-        else:
-            raise ValueError("Failed to parse path: %s" % str(path))
+        if isinstance(path, Path):
+            return path.encode()
+        if isinstance(path, str) :
+            return Path.from_str(path).encode()
+        
+        raise ValueError(f"failed to build path, invlaid type {type(path)}")
 
-    def capabilities(self) -> CapabilityResponse_:
+    @staticmethod
+    def _build_update(update: t.Union[tuple[str, t.Any], tuple[str, t.Any, ValueType], Update, pb.Update]) -> pb.Update:
+        if isinstance(update, pb.Update):
+            return update
+        if isinstance(update, Update):
+            return update.encode()
+        if isinstance(update, tuple):
+            if len(update) == 2:
+                path = Path.from_str(update[0])
+                value = Value(update[1], ValueType.from_val(update[1]))
+                upd = Update(path, value).encode()
+            elif len(update) == 3:
+                path = Path.from_str(update[2])
+                upd = Update(path, Value(update[1], update[2])).encode()
+            else:
+                raise ValueError(f"failed to build update, invlaid tuple length: {len(update)}")
+            return upd
+        raise ValueError(f"failed to build updates, invlaid type {type(update)}")
+
+    def capabilities(self) -> CapabilityResponse:
         r"""Discover capabilities of the target
 
         Usage::
@@ -140,7 +148,7 @@ class Session(object):
             In [3]: resp = sess.capabilities()
 
             In [4]: resp.gnmi_version
-            Out[4]: '0.7.0'
+            Out[4]: '0.10.0'
 
             In [5]: resp.supported_encodings
             Out[5]: [0, 4, 3]
@@ -162,17 +170,24 @@ class Session(object):
         :rtype: gnmi.messages.CapabilityResponse_
         """
 
-        _cr = CapabilityRequest_()
-
+        # _cr = CapabilityRequest_()
+        _cr = pb.CapabilityRequest()
         try:
-            response = self._stub.Capabilities(_cr.pb(), metadata=self.metadata)
+            response = self._stub.Capabilities(_cr, metadata=self.metadata)
         except grpc.RpcError as rpcerr:
-            status = Status_.from_call(rpcerr)
+            status = Status.from_call(rpcerr)
             raise GrpcError(status)
 
-        return CapabilityResponse_(response)
+        return CapabilityResponse.decode(response)
 
-    def get(self, paths: list, options: GetOptions = {}) -> GetResponse_:
+    def get(self, 
+            paths: list[str],
+            prefix: t.Optional[str] = None,
+            encoding: str = "json",
+            data_type: str = "all",
+            # use_models: 
+            # extension:
+        ) -> GetResponse:
         r"""Get snapshot of state from the target
 
         Usage::
@@ -194,84 +209,114 @@ class Session(object):
             /system/memory/state/physical 2062848000
             /system/memory/state/reserved 2007666688
 
+        :param prefix: path prefix
+        :type prefix: str
         :param paths: List of paths
         :type paths: list
-        :param options:
-        :type options: gnmi.structures.GetOptions
+        :param data_type:
+        :type data_type: str
+        :param encoding:
+        :type encoding: str
 
         :rtype: gnmi.messages.GetResponse_
         """
 
         response: pb.GetResponse
 
-        prefix = self._parse_path(options.get("prefix"))
-        encoding = util.get_gnmi_constant(options.get("encoding") or "json")
+
+        prefix_ = None
+        if prefix:
+            prefix_ = Path.from_str(prefix).encode()
         
-        type_ = GET_DATA_TYPE_MAP.get(options.get("type", "all"))
+        encoding = util.get_gnmi_constant(encoding)
+        typ = util.get_datatype(data_type)
+        paths_ = [Path.from_str(p).encode() for p in paths]
 
-        paths = [self._parse_path(path) for path in paths]
-
-        _gr = pb.GetRequest(path=paths, prefix=prefix, encoding=encoding, type=type_)
+        _gr = pb.GetRequest(path=paths_, prefix=prefix_, encoding=encoding, type=typ)
 
         try:
             response = self._stub.Get(_gr, metadata=self.metadata)
         except grpc.RpcError as rpcerr:
-            status = Status_.from_call(rpcerr)
+            status = Status.from_call(rpcerr)
             raise GrpcError(status)
 
-        return GetResponse_(response)
+        return GetResponse.decode(response)
 
     def set(
         self,
-        deletes: list[str] = [],
-        replacements: list[tuple[str, t.Any]] = [],
-        updates: list[tuple[str, t.Any]] = [],
-        options: Options = {},
-    ) -> SetResponse_:
-        r"""Set set, update or delete value from specified path
+        prefix: t.Optional[str] = None,
+        deletes: t.Optional[list[str]] = None,
+        replacements: t.Optional[list[tuple[str, t.Any]]]= None,
+        updates: t.Optional[list[tuple[str, t.Any]]] = None,
+
+    ) -> SetResponse:
+        r"""Set: set, update or delete value from specified path
 
         Usage::
 
             In [3]: updates = [("/system/config/hostname", "minemeow")]
+            or...
+            In [3]: updates = [("/system/config/hostname", "minemeow", "string_val")]
             In [4]: sess.set(updates=updates)
 
-        :param updates: List of updates
+        :param prefix: subscription path prefix
+        :type prefix: str
+        :param updates: updates
         :type updates: list
-        :param replacements: List of replacements
+        :param replacements: replacements
         :type replacements: list
-        :param deletes: List of deletes
+        :param deletes: deletes
         :type deletes: list
-        :param options:
-        :type options: gnmi.structures.Options
+
         :rtype: gnmi.messages.SetResponse_
         """
-        response: SetResponse_
 
-        prefix = self._parse_path(options.get("prefix"))
+        prefix_ = None
+        if prefix:
+            prefix_ = Path.from_str(prefix).encode()
+
         delete: list[pb.Path] = []
-        replace: list[pb.Update] = []
-        update: list[pb.Update] = []
+        replace = []
+        update = []
 
-        for d in deletes:
-            delete.append(self._build_path(d))
-        for r in replacements:
-            replace.append(self._build_update(r))
-        for u in updates:
-            update.append(self._build_update(u))
+        if deletes is not None:
+            for d in deletes:
+                delete.append(self._build_path(d))
+        if replacements is not None:
+            for r in replacements:
+                replace.append(self._build_update(r))
+        if updates is not None:
+            for u in updates:
+                update.append(self._build_update(u))
 
-        _sr = pb.SetRequest(prefix=prefix, delete=delete, update=update, replace=replace)
+        if not (updates or replacements or delete):
+            raise ValueError("nothing to update, replace or delete")
+
+        _sr = pb.SetRequest(prefix=prefix_, delete=delete, update=update, replace=replace)
 
         try:
-            response = SetResponse_(self._stub.Set(_sr, metadata=self.metadata))
+            return SetResponse.decode(self._stub.Set(_sr, metadata=self.metadata))
         except grpc.RpcError as rpcerr:
-            status = Status_.from_call(rpcerr)
+            status = Status.from_call(rpcerr)
             raise GrpcError(status)
 
-        return response
+    # def subscribe(self,):
+    #     pass
 
-    def subscribe(
-        self, paths: list, options: SubscribeOptions = {}
-    ) -> t.Iterable[SubscribeResponse_]:
+    def subscribe(self, 
+        subscriptions: list[t.Union[str, Path, Subscription]],
+        prefix: t.Optional[str] = None,
+        encoding: str = "json",
+        mode: str = "stream",
+        qos: t.Optional[int] = None,
+        aggregate: bool = False,
+        timeout: t.Optional[int] = None,
+        # subscription defaults
+        submode: str = "target_defined",
+        suppress: bool = False,
+        interval: t.Optional[int] = None,
+        heartbeat: t.Optional[int] = None,
+    ) -> t.Iterable[SubscribeResponse]:
         r"""Subscribe to state updates from the target
 
         Usage::
@@ -289,7 +334,7 @@ class Session(object):
             ...:     "timeout": 5
             ...:  }
 
-            In [60]: responses = sess.subscribe(paths, options)
+            In [60]: responses = sess.subscribe(paths)
 
             In [61]: try:
                 ...:     for resp in responses:
@@ -313,54 +358,81 @@ class Session(object):
             /interfaces/interface[name=Ethernet1]/config/name Ethernet1
             <output-omitted>
 
-        :param paths: List of paths
-        :type paths: list
-        :param options:
-        :type options: gnmi.structures.GetOptions
+        :param subscriptions: List of paths or Subscription objects
+        :type subscriptions: list
+        :param prefix:
+        :type: t.Optional[str]
+        :param encoding: 
+        :type: str
+        :param mode:
+        :type: str
+        :param qos:
+        :type: int
+        :param aggregate:
+        :type: bool
+        :param timeout: 
+        :type: int
+        #
+        :param submode:
+        :type: str
+        :param suppress:
+        :type: bool
+        :param interval:
+        :type: int
+        :param heartbeat:
+        :type: int
         :rtype: gnmi.messages.SubscribeResponse_
         """
 
-        aggregate = bool(options.get("aggregate", False))
-        encoding = util.get_gnmi_constant(options.get("encoding") or "json")
-        heartbeat = options.get("heartbeat") or 0
-        interval = options.get("interval") or 0
-        
-        mode = SUBSCRIPTION_LIST_MODE_MAP.get(options.get("mode", "stream"))
-        
-        prefix = self._parse_path(options.get("prefix"))
-        qos = pb.QOSMarking(marking=options.get("qos", 0))
-        submode = util.get_gnmi_constant(options.get("submode") or "on-change")
-        suppress = bool(options.get("suppress"))
-        timeout = options.get("timeout")
+        encoding_ = util.get_gnmi_constant(encoding)
+        mode_ = util.get_subscription_list_mode(mode)
+        submode_ = util.get_gnmi_constant(submode)
 
+        prefix_ = None
+        if prefix:
+            prefix_ = Path.from_str(prefix).encode()
+        
+        qos_ = pb.QOSMarking(marking=qos)
+        
         subs = []
-        for path in paths:
-            path = self._parse_path(path)
-            sub = pb.Subscription(
-                path=path,
-                mode=submode,
-                suppress_redundant=suppress,
-                sample_interval=interval,
-                heartbeat_interval=heartbeat,
-            )
-            subs.append(sub)
+        for sub in subscriptions:
+            if isinstance(sub, Subscription):
+                pass
+            elif isinstance(sub, (str, Path)):
+                path: Path
+                if isinstance(sub, Path):
+                    path = sub
+                else:
+                    path = Path.from_str(sub).encode()
+
+                sub = pb.Subscription(
+                    path=path,
+                    mode=submode_,
+                    suppress_redundant=suppress,
+                    sample_interval=interval,
+                    heartbeat_interval=heartbeat,
+                )
+            else:
+                raise TypeError("sub must be a Subscription or path")
+
+            subs.append(sub.encode())
 
         def _sr():
             sub_list = pb.SubscriptionList(
-                prefix=prefix,
-                mode=mode,
+                prefix=prefix_,
+                mode=mode_,
                 allow_aggregation=aggregate,
-                encoding=encoding,
+                encoding=encoding_,
                 subscription=subs,
-                qos=qos,
+                qos=qos_,
             )
             yield pb.SubscribeRequest(subscribe=sub_list)
 
         try:
             for r in self._stub.Subscribe(_sr(), timeout, metadata=self.metadata):
-                yield SubscribeResponse_(r)
+                yield SubscribeResponse.decode(r)
         except grpc.RpcError as rpcerr:
-            status = Status_.from_call(rpcerr)
+            status = Status.from_call(rpcerr)
 
             # server sometimes sends:
             #    gnmi.exceptions.GrpcError: StatusCode.UNKNOWN: context deadline exceeded

@@ -1,0 +1,64 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
+# Arista Networks, Inc. Confidential and Proprietary.
+
+import typing as t
+
+from dataclasses import dataclass
+
+from gnmi.proto import gnmi_pb2 as pb
+from gnmi.models.model import BaseModel
+from gnmi.models.path import PathDescriptor
+from gnmi.models.value import ValueDescriptor
+
+@dataclass
+class Update(BaseModel[pb.Update]):
+    path: PathDescriptor = PathDescriptor(default=None)
+    value: ValueDescriptor = ValueDescriptor(default=None)
+    duplicates: int = 0
+
+    def encode(self) -> pb.Update:
+
+        return pb.Update(
+            path=self.path.encode(),
+            val=self.value.encode(),
+            duplicates=self.duplicates,
+        )
+
+    @classmethod
+    def decode(cls, u: pb.Update) -> "Update":
+        return cls(
+            path=u.path,
+            value=u.val,
+            duplicates=u.duplicates,
+        )
+
+UpdateTuple_ = t.Union[tuple[str, t.Any], tuple[str, t.Any, int]]
+UpdateItem_ = t.Union[Update, pb.Update, UpdateTuple_]
+UpdateList_ = t.List[UpdateItem_]
+
+
+def update_list_factory(l: UpdateList_) -> list[Update]:
+    if not isinstance(l, list):
+        return []
+
+    return [update_factory(update) for update in l]
+
+
+def update_factory(update: UpdateItem_) -> Update:
+
+    if isinstance(update, Update):
+        return update
+
+    if isinstance(update, pb.Update):
+        return Update.decode(update)
+
+    if isinstance(update, tuple):
+        if 2 <= len(update) <= 3:
+            return Update(*update)
+        else:
+            raise ValueError("Invalid update format")
+    if isinstance(update, dict):
+        return Update(**update)
+    else:
+        raise ValueError("Invalid update format")

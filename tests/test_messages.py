@@ -4,7 +4,7 @@ import json
 import gnmi.proto.gnmi_pb2 as pb # type: ignore
 from google.protobuf import any_pb2 # type: ignore
 from gnmi.util import escape_string
-from gnmi.messages import Path_, Update_
+from gnmi.models import Path
 
 
 @pytest.fixture()
@@ -26,14 +26,13 @@ def gnmi_capability_response():
         supported_models=[
             pb.ModelData(name="dummy-model", organization="Arita Inc.", version="1.0")
         ],
-        supported_encodings=[0, 3, 4],
+        supported_encodings=[pb.Encoding.JSON, pb.Encoding.ASCII, pb.Encoding.BYTES],
         gNMI_version="1.0",
     )
 
 
 any_ = any_pb2.Any()
 any_.Pack(pb.TypedValue(string_val="testany"))
-
 
 @pytest.fixture(
     params=[
@@ -112,14 +111,14 @@ def test_gnmi_path():
         "/path/with/some[key=val-ue]/more[key=ssss]",
     ]
     for path in paths:
-        pobj = Path_.from_string(path)
-        pstr = pobj.to_string()
+        pobj = Path.from_str(path)
+        pstr = str(pobj)
 
-        [(e.name, e.key) for e in pobj.elem]
+        # [(e.name, e.key) for e in pobj.elem]
 
         assert path == pstr
 
-def test_gnmi_update_fromkeyval():
-    upd = Update_.from_keyval(("/path/to/val", "hello"))
-
-    assert isinstance(upd, Update_)
+# def test_gnmi_update_fromkeyval():
+#     upd = Update_.from_keyval(("/path/to/val", "hello"))
+#
+#     assert isinstance(upd, Update_)

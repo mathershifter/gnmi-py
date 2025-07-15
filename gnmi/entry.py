@@ -1,316 +1,99 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-
-import argparse
-import json
 import signal
 import sys
-import typing as t
-from grpc import __version__ as grpc_version
-from google.protobuf import __version__ as pb_version
 
-from gnmi.config import Config
-from gnmi.messages import Notification_
-from gnmi.session import Session
-from gnmi.structures import CertificateStore, GetOptions, SubscribeOptions
+from gnmi.session import Session, TLSConfig
+from gnmi.models import Subscription
 from gnmi.exceptions import GrpcDeadlineExceeded
-from gnmi.target import Target
-from gnmi import util
-import gnmi
+from gnmi import cli, util
 
 
-def signal_handler(signal, frame):
+def signal_handler(*_, **__):
     sys.exit(0)
-
 
 signal.signal(signal.SIGINT, signal_handler)
 
-
-def format_version():
-    elems = (gnmi.__version__, pb_version, grpc_version)
-    return "gnmipy %s [protobuf %s, grpcio %s]" % elems
-
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--version", action="version", version=format_version())
-    parser.add_argument("target", help="gNMI gRPC server")
-    parser.add_argument(
-        "operation",
-        type=str,
-        choices=["capabilities", "get", "subscribe"],
-        help="gNMI operation [capabilities, get, subscribe]",
-    )
-    parser.add_argument(
-        "--pretty",
-        action="store_true",
-        default=False,
-        help="pretty print notifications",
-    )
-    parser.add_argument(
-        "-c", "--config", type=str, default=None, help="Path to gNMI config file"
-    )
-
-    parser.add_argument("--use-alias", action="store_true", help="use aliases")
-
-    parser.add_argument("--tls-ca", default="", type=str, help="certificate authority")
-    parser.add_argument("--tls-cert", default="", type=str, help="client certificate")
-    parser.add_argument("--tls-key", default="", type=str, help="client key")
-    parser.add_argument("--insecure", action="store_true", help="disable TLS")
-    parser.add_argument(
-        "--host-override", default=None, help="Override gRPC server hostname"
-    )
-
-    group = parser.add_argument_group()
-    group.add_argument(
-        "--debug-grpc", action="store_true", help="enable gRPC debugging"
-    )
-
-    group = parser.add_argument_group()
-    group.add_argument("-u", "--username", default="admin")
-    group.add_argument("-p", "--password", default="")
-
-    group = parser.add_argument_group("Common options")
-    group.add_argument(
-        "--encoding",
-        default="json",
-        type=str,
-        choices=["json", "bytes", "proto", "ascii", "json-ietf"],
-        help="set encoding",
-    )
-
-    group.add_argument(
-        "--prefix", default="", type=str, help="gRPC path prefix (default: <empty>)"
-    )
-
-    group = parser.add_argument_group("Get options")
-    group.add_argument(
-        "--get-type", type=str, default=None, choices=["config", "state", "operational"]
-    )
-    group.add_argument("paths", nargs="*", default=[])
-
-    group = parser.add_argument_group("Replace options")
-
-    group = parser.add_argument_group("Subscribe options")
-    group.add_argument(
-        "--interval",
-        default=None,
-        type=str,
-        help="sample interval in milliseconds (default: 10s)",
-    )
-    group.add_argument(
-        "--timeout",
-        default=None,
-        type=int,
-        help="subscription duration in seconds (default: None)",
-    )
-    group.add_argument(
-        "--heartbeat",
-        default=None,
-        type=str,
-        help="heartbeat interval in milliseconds (default: None)",
-    )
-    group.add_argument("--aggregate", action="store_true", help="allow aggregation")
-    group.add_argument("--suppress", action="store_true", help="suppress redundant")
-    group.add_argument(
-        "--mode",
-        default=None,
-        type=str,
-        choices=["stream", "once", "poll"],
-        help="Specify subscription mode",
-    )
-    group.add_argument(
-        "--submode",
-        default=None,
-        type=str,
-        choices=["target-defined", "on-change", "sample"],
-        help="subscription sub-mode",
-    )
-    group.add_argument(
-        "--once",
-        action="store_true",
-        default=False,
-        help=(
-            "End subscription after first sync_response. This is a "
-            "workaround for implementions that do not support 'once' "
-            "subscription mode"
-        ),
-    )
-    group.add_argument(
-        "--qos",
-        default=0,
-        type=int,
-        help="DSCP value to be set on transmitted telemetry",
-    )
-
-    # group.add_argument("--tls-no-verify", action="store_true", help="")
-
-    return parser.parse_args()
-
-
-def make_config(args) -> Config:
-    data: dict[str, t.Any] = {}
-    operation_name = args.operation.capitalize()
-    _operation = data[operation_name] = {}
-    _metadata = data["metadata"] = {}
-
-    if args.username:
-        _metadata["username"] = args.username
-        _metadata["password"] = args.password
-
-    if operation_name == "Capabilities":
-        _operation["exists"] = True
-        return Config(data)
-
-    _operation["paths"] = args.paths
-    _operation["options"] = {}
-    if args.prefix:
-        _operation["options"]["prefix"] = args.prefix
-
-    if args.encoding:
-        _operation["options"]["encoding"] = args.encoding
-
-    if operation_name == "Get":
-        if args.get_type:
-            _operation["options"]["type"] = args.get_type
-
-    elif operation_name == "Subscribe":
-        if args.heartbeat:
-            _operation["options"]["heartbeat"] = util.parse_duration(args.heartbeat)
-
-        if args.interval:
-            _operation["options"]["interval"] = util.parse_duration(args.interval)
-
-        if args.mode:
-            _operation["options"]["mode"] = args.mode
-        if args.qos:
-            _operation["options"]["qos"] = args.qos
-
-        if args.submode:
-            _operation["options"]["submode"] = args.submode
-
-        if args.suppress:
-            _operation["options"]["suppress"] = args.suppress
-
-        if args.timeout:
-            _operation["options"]["timeout"] = args.timeout
-
-    elif operation_name == "Replace":
-        pass
-
-    return Config(data)
-
-
-def write_notification(n: Notification_, pretty: bool = False) -> None:
-    notif: dict[str, t.Any] = {}
-
-    updates = []
-    for u in n.update:
-        val = u.get_value()
-        if isinstance(val, bytes):
-            val = val.decode("utf-8")
-
-        updates.append({"path": str(u.path), "value": val})
-
-    deletes = []
-    for d in n.delete:
-        deletes.append({"path": str(d)})
-
-    if n.atomic:
-        notif["atomic"] = True
-
-    prefix = str(n.prefix)
-
-    if prefix:
-        notif["prefix"] = prefix
-
-    if n.timestamp:
-        notif["timestamp"] = n.timestamp
-        notif["time"] = n.time.isoformat()
-
-    if updates:
-        notif["updates"] = updates
-
-    if deletes:
-        notif["deletes"] = deletes
-
-    # print(notif)
-    if pretty:
-        print(json.dumps(notif, separators=(", ", ": "), indent=2))
-    else:
-        print(json.dumps(notif))
-
-
 def main():
-    args = parse_args()
+    # rc: conf.Conf = util.load_rc()
+    cnf = cli.load_conf()
 
-    rc: Config = util.load_rc()
-    
-    config = make_config(args).merge(rc)
-
-    target = Target.from_url(args.target)
-
-    if args.debug_grpc:
+    if cnf.debug_grpc:
         util.enable_grpc_debuging()
 
-    cs = CertificateStore()
-    if args.tls_ca != "":
-        tls_ca = b""
-        tls_cert = b""
-        tls_key = b""
-
-        with open(args.tls_ca, "rb") as fh:
-            tls_ca = fh.read()
-        with open(args.tls_cert, "rb") as fh:
-            tls_cert = fh.read()
-        with open(args.tls_key, "rb") as fh:
-            tls_key = fh.read()
-
-        cs = CertificateStore(
-            root_certificates=tls_ca, certificate_chain=tls_cert, private_key=tls_key
-        )
-
     grpc_options: dict = {}
-
+    tls_config = None
+    if cnf.tls:
+        tls_config = TLSConfig(
+            ca_cert=cnf.tls.ca_cert,
+            cert=cnf.tls.cert,
+            key=cnf.tls.key,
+            get_server_cert=cnf.tls.get_server_certificates
+        )
     sess = Session(
-        target,
-        metadata=config.metadata,
-        insecure=args.insecure,
-        certificates=cs,
+        cnf.target,
+        metadata=cnf.metadata,
+        insecure=cnf.insecure,
+        tls=tls_config,
         grpc_options=grpc_options,
     )
 
-    if config.get("Capabilities"):
+    if cnf.capabilities:
         cap_response = sess.capabilities()
-        print("gNMI Version: %s" % cap_response.gnmi_version)
+        print(f"gNMI Version: {cap_response.gnmi_version}")
         print(
-            "Encodings: %s" % ", ".join([i.name for i in cap_response.supported_encodings])
+            f"Encodings: {', '.join([i.name for i in cap_response.supported_encodings])}"
         )
         print("Models:")
         for model in cap_response.supported_models:
-            print("  %s" % model["name"])
-            print("    Version:      %s" % model["version"] or "n/a")
-            print("    Organization: %s" % model["organization"])
+            print(f" {model.name}")
+            print(f"    Version:      {model.version or 'n/a'}")
+            print(f"    Organization: {model.organization}")
 
-    elif config.get("Get") and config["Get"].paths:
-        options: GetOptions = config.Get.options
-        paths = config.Get.paths
-        get_response = sess.get(paths, options)
-        for notif in get_response:
-            write_notification(notif, args.pretty)
+    elif cnf.get:
+        # options: GetOptions = cnf.get.options
+        # paths = config.Get.paths
+        rsp = sess.get(
+            paths=cnf.get.paths,
+            prefix=cnf.get.prefix,
+            encoding=cnf.get.encoding,
+            data_type=cnf.get.type
+        )
 
-    elif config.get("Subscribe") and config["Subscribe"].paths:
-        sub_opts: SubscribeOptions = config.Subscribe.options
-        paths = config.Subscribe.paths
+        for notif in rsp.notifications:
+            cli.write_notification(notif, cnf.pretty)
+
+    elif cnf.subscribe:
+        subsc = cnf.subscribe
+        subs = []
+        for sub in subsc.subscriptions:
+
+            # print(f"sub: {sub}")
+            subs.append(Subscription(
+                path=sub.path,
+                mode=sub.mode,
+                sample_interval=sub.sample_interval,
+                heartbeat_interval=sub.heartbeat_interval,
+                suppress_redundant=sub.suppress_redundant
+            ))
+        # sub_opts: SubscribeOptions = config.Subscribe.options
+        # paths = config.Subscribe.paths
         try:
-            for resp in sess.subscribe(paths, options=sub_opts):
+            for resp in sess.subscribe(
+                subscriptions=subs,
+                prefix=cnf.subscribe.prefix,
+                encoding=cnf.subscribe.encoding,
+                mode=cnf.subscribe.mode,
+                qos=cnf.subscribe.qos,
+                aggregate=cnf.subscribe.allow_aggregation,
+                #timeout=cnf.subscribe.timeout
+            ):
                 if resp.sync_response:
-                    if args.once:
+                    if subsc.mode.lower() == "once":
                         break
                     continue
-                write_notification(resp.update, args.pretty)
+                cli.write_notification(resp.update, cnf.pretty)
         except GrpcDeadlineExceeded:
             return
 

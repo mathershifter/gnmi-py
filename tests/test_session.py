@@ -2,35 +2,25 @@ import os
 import pytest
 from tests.conftest import GNMI_PASS, GNMI_TARGET, GNMI_INSECURE, GNMI_USER
 from gnmi.session import Session
-from gnmi.messages import Path_, Update_
 from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
-from gnmi.target import Target
-
-#pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
+from gnmi.models import Update, Path
 
 GNMI_PATHS = os.environ.get("GNMI_PATHS", "/system/config;/system/memory/state")
 
 
 @pytest.fixture()
 def paths():
-    return [Path_.from_string(p) for p in GNMI_PATHS.split(";")]
-
-
-@pytest.fixture()
-def target():
-    return Target.from_url(GNMI_TARGET)
+    return GNMI_PATHS.split(";")
 
 @pytest.fixture()
-def session(target, certificates):
+def session(target, tlsconfig):
     metadata = {"username": GNMI_USER, "password": GNMI_PASS}
     if GNMI_INSECURE:
         insecure = True
     else:
         insecure = False
-
-    # print(certificates)
     return Session(
-        target, insecure=insecure, certificates=certificates, metadata=metadata
+        target, insecure=insecure, tls=tlsconfig, metadata=metadata
     )
 
 @pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
@@ -40,21 +30,21 @@ def test_cap(session):
 
 @pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 def test_get(session, paths):
-    resp = session.get(paths, options={})
-    for notif in resp:
+    resp = session.get(paths)
+    for notif in resp.notifications:
         assert notif.timestamp is not None
         for update in notif.updates:
-            assert type(update) is Update_
-            assert type(update.path) is Path_
-            assert hasattr(update, "val")
+            assert type(update) is Update
+            assert type(update.path) is Path
+            assert hasattr(update, "value")
 
 @pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 def test_sub(session, paths):
     with pytest.raises(GrpcDeadlineExceeded):
-        for resp in session.subscribe(paths, options={"timeout": 2}):
+        for resp in session.subscribe(paths, timeout=2):
             if resp.sync_response:
                 continue
-            for update in resp.update.updates:
+            for resp.update in resp.update.updates:
                 pass
 
 @pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
@@ -68,7 +58,7 @@ def test_set(session):
     path = "/system/config/hostname"
 
     def _get_hostname():
-        return session.get([path]).collect()[0][0].get_value()
+        return session.get([path]).notifications[0].updates[0].value.value
 
     hostname_ = _get_hostname()
 
@@ -78,15 +68,14 @@ def test_set(session):
 
     with pytest.raises(GrpcError):
         rsps = session.set(replacements=invalid)
-
-    # assert rsps.collect()[0].op.name == "INVALID"
+        assert rsps.responses[0].op.name == "INVALID"
 
     replacements = [
         ("/system/config/hostname", "minemeow"),
     ]
 
     rsps = session.set(replacements=replacements)
-    assert rsps.collect()[0].op.name == "REPLACE"
+    assert rsps.responses[0].op.name == "REPLACE"
 
     _ = session.get(["/system/config/hostname"])
 
@@ -95,11 +84,6 @@ def test_set(session):
     updates = [("/system/config", {"hostname": hostname_})]
 
     rsps = session.set(updates=updates)
-    assert rsps.collect()[0].op.name == "UPDATE"
-
+    assert rsps.responses[0].op.name == "UPDATE"
     assert _get_hostname() == hostname_
 
-    # deletes = [
-
-    # ]
-    # rsps = session.set(deletes=updates)

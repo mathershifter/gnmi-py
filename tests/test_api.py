@@ -4,51 +4,50 @@
 
 import pytest
 
-from gnmi.messages import CapabilityResponse_, Path_, Update_
 from gnmi import capabilites, get, replace, update, subscribe
-
+from gnmi.models import CapabilityResponse, Update, Path
 from tests.conftest import GNMI_AUTH, GNMI_TARGET
 
 pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 
 
-def test_discover(is_insecure, certificates):
+def test_cap(target, is_insecure, tlsconfig):
     response = capabilites(
-        GNMI_TARGET, insecure=is_insecure, certificates=certificates, auth=GNMI_AUTH
+        target, insecure=is_insecure, tls=tlsconfig, auth=GNMI_AUTH
     )
 
-    assert isinstance(response, CapabilityResponse_), "Invalid response"
+    assert isinstance(response, CapabilityResponse), "Invalid response"
 
 
-def test_get(is_insecure, certificates):
+def test_get(target, is_insecure, tlsconfig):
     resp = get(
-        GNMI_TARGET,
+        target,
         paths=["/system/config/hostname"],
         insecure=is_insecure,
-        certificates=certificates,
+        tls=tlsconfig,
         auth=GNMI_AUTH,
     )
 
     for notif in resp:
-        for u in notif.update:
+        for u in notif.updates:
             assert str(u.path) == "/system/config/hostname"
-            assert isinstance(u.get_value(), str)
+            assert isinstance(u.value.value, str)
 
 
-def test_subscribe(is_insecure, certificates):
+def test_subscribe(target, is_insecure, tlsconfig):
     resp = subscribe(
-        GNMI_TARGET,
+        target,
         paths=["/system/processes/process", "/interfaces/interface"],
         insecure=is_insecure,
-        certificates=certificates,
+        tls=tlsconfig,
         auth=GNMI_AUTH,
-        options={"timeout": 2},
+        timeout=2
     )
 
     seen = {}
     for notif in resp:
-        for u in notif:
-            if isinstance(u, Update_):
+        for u in notif.updates:
+            if isinstance(u, Update):
                 path = str(u.path)
                 if path.startswith("/system/processes/process"):
                     seen["/system/processes/process"] = True
@@ -56,25 +55,28 @@ def test_subscribe(is_insecure, certificates):
                 if path.startswith("/interfaces/interface"):
                     seen["/interfaces/interface"] = True
 
-            elif isinstance(u, Path_):
-                print(f"DELETED: {path}")
+            elif isinstance(u, Path): ...
+                # print(f"DELETED: {path}")
 
     assert "/system/processes/process" in seen.keys()
     assert "/interfaces/interface" in seen.keys()
 
 
-def test_set(is_insecure, certificates, request):
+def test_set(target, is_insecure, tlsconfig, request):
     def _get_hostname():
         resp = get(
-            GNMI_TARGET,
+            target,
             ["/system/config/hostname"],
             insecure=is_insecure,
-            certificates=certificates,
+            tls=tlsconfig,
             auth=GNMI_AUTH,
         )
+
         for notif in resp:
-            for u in notif:
-                return u.get_value()
+            for u in notif.updates:
+                return u.value
+
+        return None
 
     hostname = _get_hostname()
 
@@ -85,7 +87,7 @@ def test_set(is_insecure, certificates, request):
                 GNMI_TARGET,
                 updates=[("/system/config/hostname", hostname)],
                 insecure=is_insecure,
-                certificates=certificates,
+                tls=tlsconfig,
                 auth=GNMI_AUTH,
             )
 
@@ -93,23 +95,23 @@ def test_set(is_insecure, certificates, request):
 
     updates = [("/system/config/hostname", "minemeow")]
     gen = update(
-        GNMI_TARGET,
+        target,
         updates=updates,
         insecure=is_insecure,
-        certificates=certificates,
+        tls=tlsconfig,
         auth=GNMI_AUTH,
     )
-    for r in gen:
+    for _ in gen.responses:
         pass
 
     replacements = [("/system/config", {"hostname": hostname})]
     gen = replace(
-        GNMI_TARGET,
+        target,
         replacements=replacements,
         insecure=is_insecure,
-        certificates=certificates,
+        tls=tlsconfig,
         auth=GNMI_AUTH,
     )
 
-    for r in gen:
+    for _ in gen.responses:
         pass

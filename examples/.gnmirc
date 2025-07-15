@@ -3,17 +3,15 @@ metadata:
     password: ""
 
 get:
-    options:
-        encoding: json
+    oencoding: json
 
 subscribe:
-    options:
-        aggregate: false
-        encoding: json
-        mode: stream
-        submode: on-change
-        suppress: true
-        # qos: 0 
-        # interval:
-        # heartbeat:
-        # timeout:
+    aggregate: false
+    encoding: json
+    mode: stream
+    submode: on-change
+    suppress: true
+    # qos: 0 
+    # interval:
+    # heartbeat:
+    # timeout:
