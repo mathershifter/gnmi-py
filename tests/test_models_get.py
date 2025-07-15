@@ -40,10 +40,10 @@ def test_get_request():
     ]
 
     for test in tests:
-        l, r = test
+        want, have = test
 
-        assert l.encode() == r
-        assert GetRequest.decode(r) == l
+        assert want.encode() == have
+        assert GetRequest.decode(have) == want
 
 
 def test_get_response():
@@ -97,7 +97,7 @@ def test_get_response():
     ]
 
     for test in tests:
-        l, r = test
+        want, have = test
 
-        assert l.encode() == r
-        assert GetResponse.decode(r) == l
+        assert want.encode() == have
+        assert GetResponse.decode(have) == want

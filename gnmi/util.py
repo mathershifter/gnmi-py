@@ -94,6 +94,6 @@ def oneof(*args) -> int:
         raise ValueError(f"There can only be one; you have {len(the)}")
 
     if len(the) == 0:
-        raise ValueError(f"There must be one and only be one; you have none")
+        raise ValueError("There must be one and only be one; you have none")
 
     return the[0]

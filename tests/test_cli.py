@@ -4,7 +4,7 @@
 
 from gnmi.cli import parse_args, arg_loader
 from gnmi import config
-# from pprint import pprint
+
 def test_arg_loader():
     tests = [
         (
@@ -33,7 +33,7 @@ def test_arg_loader():
                         "interface[name=Ethernet3/2/1.1000]/state/counters"
                     ],
                     prefix="/interfaces",
-                    type=config.DataType.ALL,
+                    type="all",
                 ),
             )
         ),
@@ -56,12 +56,12 @@ def test_arg_loader():
                     subscriptions=[
                         config.Subscription(
                             path="interface/state/counters",
-                            mode=config.SubscriptionMode.ON_CHANGE,
+                            mode="on-change",
                             # heartbeat_interval=10*1_000_000_000
                         ),
                     ],
                     prefix="/interfaces",
-                    mode=config.SubscribeMode.ONCE
+                    mode="once"
                 )
             )
         )

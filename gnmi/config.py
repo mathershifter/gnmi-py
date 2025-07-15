@@ -42,29 +42,7 @@ class Extension(ConfigBase):
 
 @dataclass
 class Capabilities(ConfigBase): ...
-       
-# class Encoding(enum.Enum):
-#     JSON = 0
-#     BYTES = 1
-#     PROTO = 2
-#     ASCII = 3
-#     JSON_IETF = 4
-#
-#     @classmethod
-#     def from_str(cls, v: str) -> "Encoding":
-#         v = v.lower()
-#         if v == "json":
-#             return Encoding.JSON
-#         if v == "bytes":
-#             return Encoding.BYTES
-#         if v == "proto":
-#             return Encoding.PROTO
-#         if v in ("ascii", "text"):
-#             return Encoding.ASCII
-#         if v == "json_ietf":
-#             return Encoding.JSON_IETF
-#
-#         raise ValueError(f"invalid encoding: {v}")
+
 
 @dataclass
 class ModelData(ConfigBase):
@@ -72,44 +50,16 @@ class ModelData(ConfigBase):
     organization: str
     version: str
 
-# class DataType(enum.Enum):
-#     ALL = 0
-#     CONFIG = 1
-#     STATE = 2
-#     OPERATIONAL = 3
-#
-#     @classmethod
-#     def from_str(cls, v: str) -> "DataType":
-#         v = v.lower()
-#         if v == "all":
-#             return DataType.ALL
-#         if v == "config":
-#             return DataType.CONFIG
-#         if v == "state":
-#             return DataType.STATE
-#         if v == "operational":
-#             return DataType.OPERATIONAL
-#
-#         raise ValueError(f"invalid data_type: {v}")
 
 @dataclass
 class Get(ConfigBase):
     paths: list[str]
 
     prefix: str = ""
-    # type: DataType = DataType.ALL
     type: str = "all"
-    # encoding: Encoding = Encoding.JSON
     encoding: str = "json"
     use_models: t.Optional[list[ModelData]] = None
 
-    # @classmethod
-    # def deserialize_encoding(cls, data, **_) -> Encoding:
-    #     return Encoding.from_str(data)
-    
-    # @classmethod
-    # def deserialize_type(cls, data: str, **_) -> "DataType":
-    #     return DataType.from_str(data)
 
 ValType = t.Union[
     str,
@@ -120,101 +70,13 @@ ValType = t.Union[
     list["ValType"],
 ]
 
-# class ValueEncoding(enum.Enum):
-#     AUTO = 0
-#     # // String value.
-#     # string string_val = 1;
-#     STRING = 1
-#     # // Integer value.
-#     # int64 int_val = 2;
-#     INT64 = 2
-#     # // Unsigned integer value.
-#     # uint64 uint_val = 3;
-#     UINT64 = 3
-#     # // Bool value.
-#     # bool bool_val = 4;
-#     BOOL = 4
-#     # // Arbitrary byte sequence value.
-#     # bytes bytes_val = 5;
-#     BYTES = 5
-#     # // Deprecated - use double_val.
-#     # float float_val = 6 [deprecated = true];
-#     FLOAT = 6
-#     # // Floating point value.
-#     # double double_val = 14;
-#     DOUBLE = 14
-#     # // Deprecated - use double_val.
-#     # Decimal64 decimal_val = 7
-#     #     [deprecated = true];
-#     DECIMAL = 7
-#     # // Mixed type scalar array value.
-#     # ScalarArray leaflist_val = 8;
-#     LEAFLIST = 8
-#     # // protobuf.Any encoded bytes.
-#     # google.protobuf.Any any_val = 9;
-#     ANY = 9
-#     # // JSON-encoded text.
-#     # bytes json_val = 10;
-#     JSON = 10
-#     # // JSON-encoded text per RFC7951.
-#     # bytes json_ietf_val = 11;
-#     JSON_IETF = 11
-#     # // Arbitrary ASCII text.
-#     # string ascii_val = 12;
-#     ASCII = 12
-#     # // Protobuf binary encoded bytes. The message type is not included.
-#     # // See the specification at
-#     # // github.com/openconfig/reference/blob/master/rpc/gnmi/protobuf-vals.md
-#     # // for a complete specification. [Experimental]
-#     # bytes proto_bytes = 13;
-#     PROTO_BYTES = 13
-#
-#     @classmethod
-#     def from_str(cls, v: str) -> "ValueEncoding":
-#         v = v.lower()
-#         if v == "auto":
-#             return ValueEncoding.AUTO
-#         if v == "string":
-#             return ValueEncoding.STRING
-#         if v in ("int", "int64"):
-#             return ValueEncoding.INT64
-#         if v in ("uint", "uint64"):
-#             return ValueEncoding.UINT64
-#         if v == "bool":
-#             return ValueEncoding.BOOL
-#         if v == "bytes":
-#             return ValueEncoding.BYTES
-#         if v == "float":
-#             return ValueEncoding.FLOAT
-#         if v == "double":
-#             return ValueEncoding.DOUBLE
-#         if v == "deimal":
-#             return ValueEncoding.DECIMAL
-#         if v == "leaflist":
-#             return ValueEncoding.LEAFLIST
-#         if v == "any":
-#             return ValueEncoding.ANY
-#         if v == "json":
-#             return ValueEncoding.JSON
-#         if v == "json_ietf":
-#             return ValueEncoding.JSON_IETF
-#         if v == "ascii":
-#             return ValueEncoding.ASCII
-#         if v in ("proto_bytes", "proto"):
-#             return ValueEncoding.PROTO_BYTES
-#
-#         raise ValueError(f"invalid value_encoding: {v}")
 
 @dataclass
 class Value(ConfigBase):
 
     value: ValType = 0
-    # encoding: ValueEncoding = ValueEncoding.AUTO
     encoding: str = "auto"
 
-    # @classmethod
-    # def deserialize_encoding(cls, data, **_) -> ValueEncoding:
-    #     return ValueEncoding.from_str(data)
 
 @dataclass
 class Update(ConfigBase):

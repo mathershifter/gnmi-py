@@ -3,7 +3,7 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 from gnmi.proto import gnmi_pb2 as pb
 
-from gnmi.models.set import SetRequest, SetResponse
+from gnmi.models.set import SetRequest
 
 
 def test_model_set_request():
@@ -34,9 +34,9 @@ def test_model_set_request():
     ]
 
     for test in tests:
-        l, r = test
-        assert l.encode() == r
-        assert SetRequest.decode(r) == l
+        want, have = test
+        assert want.encode() == have
+        assert SetRequest.decode(have) == want
 
 # def test_model_set_response():
 #     tests = [

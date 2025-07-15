@@ -38,11 +38,11 @@ UpdateItem_ = t.Union[Update, pb.Update, UpdateTuple_]
 UpdateList_ = t.List[UpdateItem_]
 
 
-def update_list_factory(l: UpdateList_) -> list[Update]:
-    if not isinstance(l, list):
+def update_list_factory(ul: UpdateList_) -> list[Update]:
+    if not isinstance(ul, list):
         return []
 
-    return [update_factory(update) for update in l]
+    return [update_factory(update) for update in ul]
 
 
 def update_factory(update: UpdateItem_) -> Update:
