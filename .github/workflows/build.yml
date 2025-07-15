@@ -21,7 +21,8 @@ jobs:
       - name: Install the project
         run: uv sync --locked --all-extras --dev
 
+      - name: Run lynter
+        run: uv run --group test ruff check
       - name: Run tests
         # For example, using `pytest`
-        run: uv run pytest tests
-
+        run: uv run --group test pytest tests/
