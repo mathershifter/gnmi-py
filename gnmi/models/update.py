@@ -8,14 +8,18 @@ from dataclasses import dataclass
 
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.model import BaseModel
-from gnmi.models.path import PathDescriptor
+from gnmi.models.path import Path, path_factory
 from gnmi.models.value import ValueDescriptor
 
 @dataclass
 class Update(BaseModel[pb.Update]):
-    path: PathDescriptor = PathDescriptor(default=None)
+    path: t.Union[Path, pb.Path, str] = ""
     value: ValueDescriptor = ValueDescriptor(default=None)
     duplicates: int = 0
+
+    @staticmethod
+    def path_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     def encode(self) -> pb.Update:
 

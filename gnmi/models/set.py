@@ -4,7 +4,7 @@
 import typing as t
 from dataclasses import dataclass, field
 
-from gnmi.models.path import PathDescriptor, Path, path_factory
+from gnmi.models.path import Path, path_factory
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_ext_pb2 as ext_pb2
 from gnmi.models.model import BaseModel
@@ -15,12 +15,16 @@ from gnmi.models.update import update_list_factory
 
 @dataclass
 class SetRequest(BaseModel[pb.SetRequest]):
-    prefix: PathDescriptor = PathDescriptor(default="")
+    prefix: t.Union[Path, pb.Path, str] = ""
     deletes: list[t.Union[Path, str]] = field(default_factory=list)
     replacements: list[Update] = field(default_factory=list)
     updates: list[Update] = field(default_factory=list)
     union_replacements: list[Update] = field(default_factory=list)
     extensions: list[ext_pb2.Extension] = field(default_factory=list)
+
+    @staticmethod
+    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     @staticmethod
     def deletes_factory(deletes: list[t.Union[str, Path]]) -> list[Path]:
@@ -85,11 +89,15 @@ class SetRequest(BaseModel[pb.SetRequest]):
 
 @dataclass
 class SetResponse(BaseModel[pb.SetResponse]):
-    prefix: PathDescriptor = PathDescriptor(default="")
+    prefix: t.Union[Path, pb.Path, str] = ""
     responses: list[t.Union[UpdateResult, pb.UpdateResult]] = None
     message: Error = None
     timestamp: int = 0
     extensions: list[ext_pb2.Extension] = field(default_factory=list)
+
+    @staticmethod
+    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     @staticmethod
     def responses_factory(responses: list[t.Union[UpdateResult, pb.UpdateResult]]) -> list[UpdateResult]:

@@ -11,7 +11,7 @@ from gnmi.proto import gnmi_pb2 as pb
 from gnmi.util import contstantize, get_subscription_list_mode, get_gnmi_constant
 from gnmi.models.model import BaseModel
 from gnmi.models.subscription import Subscription
-from gnmi.models.path import Path
+from gnmi.models.path import Path, path_factory
 from gnmi.models.descriptor import Enum
 from gnmi.models import Encoding, ModelData
 
@@ -34,7 +34,7 @@ class SubscriptionListMode(enum.Enum):
 @dataclass
 class SubscriptionList(BaseModel[pb.SubscriptionList]):
     subscriptions: list[Subscription]
-    prefix: t.Union[Path, str]
+    prefix: t.Union[pb.Path, Path, str]
     encoding: Enum[Encoding] = Enum(default=Encoding.JSON)
     mode: Enum[SubscriptionListMode] = Enum(default=SubscriptionListMode.STREAM)
     allow_aggregation: bool = False
@@ -43,14 +43,8 @@ class SubscriptionList(BaseModel[pb.SubscriptionList]):
     use_models: t.Optional[list[ModelData]] = None
 
     @staticmethod
-    def prefix_factory(p: t.Union[Path, str]) -> Path:
-        if isinstance(p, Path):
-            return p
-
-        if isinstance(p, str):
-            return Path.from_str(p)
-
-        raise TypeError(f"unsupported type {type(p)}")
+    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     def encode(self) -> pb.SubscriptionList:
         return pb.SubscriptionList(

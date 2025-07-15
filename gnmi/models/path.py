@@ -89,26 +89,26 @@ class Path(BaseModel[pb.Path]):
         return cls(p, path.origin, path.target)
 
 
-class PathDescriptor:
-    def __init__(self, *, default: t.Union[None, str, Path, pb.Path] = None):
-        self._default = None
-
-        if default is not None:
-            self._default = path_factory(default)
-
-
-    def __set_name__(self, owner, name):
-        self._name = "_"+name
-
-
-    def __get__(self, inst, owner):
-        if inst is None:
-            return self._default
-        return getattr(inst, self._name, self._default)
-
-
-    def __set__(self, inst, value: t.Union[Path, str]):
-        setattr(inst, self._name, path_factory(value))
+# class PathDescriptor:
+#     def __init__(self, *, default: t.Union[None, str, Path, pb.Path] = None):
+#         self._default = None
+#
+#         if default is not None:
+#             self._default = path_factory(default)
+#
+#
+#     def __set_name__(self, owner, name):
+#         self._name = "_"+name
+#
+#
+#     def __get__(self, inst, owner):
+#         if inst is None:
+#             return self._default
+#         return getattr(inst, self._name, self._default)
+#
+#
+#     def __set__(self, inst, value: t.Union[Path, str]):
+#         setattr(inst, self._name, path_factory(value))
 
 
 def path_factory(path: t.Optional[t.Union[str, Path, pb.Path]]) -> t.Optional[Path]:

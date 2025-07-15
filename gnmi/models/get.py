@@ -6,7 +6,7 @@ import typing as t
 
 from dataclasses import dataclass, field
 
-from gnmi.models.path import PathDescriptor, Path, path_factory
+from gnmi.models.path import Path, path_factory
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_ext_pb2 as ext_pb2
 from gnmi.models.model import BaseModel
@@ -21,9 +21,13 @@ class DataType(enum.Enum):
 
 @dataclass
 class GetRequest(BaseModel[pb.GetRequest]):
-    prefix: PathDescriptor = PathDescriptor(default="")
+    prefix: t.Union[pb.Path, Path, str] = ""
     paths: list[t.Union[str,Path]] = field(default_factory=list)
     type: DataType = DataType.ALL
+
+    @staticmethod
+    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     @staticmethod
     def paths_factory(paths: list[t.Union[Path, str]]) -> list[Path]:

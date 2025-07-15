@@ -2,6 +2,8 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 import enum
+import typing as t
+
 from dataclasses import dataclass
 
 from  gnmi.models.descriptor import Duration, Enum
@@ -9,7 +11,7 @@ from gnmi.proto import gnmi_pb2 as pb
 
 from gnmi.util import contstantize, get_gnmi_constant
 from gnmi.models.model import BaseModel
-from gnmi.models.path import PathDescriptor
+from gnmi.models.path import Path, path_factory
 
 class SubscriptionMode(enum.Enum):
     TARGET_DEFINED = 0
@@ -31,7 +33,7 @@ class SubscriptionMode(enum.Enum):
 
 @dataclass
 class Subscription(BaseModel[pb.Subscription]):
-    path: PathDescriptor = PathDescriptor(default="")
+    path: t.Union[pb.Path, Path, str]
     mode: Enum[SubscriptionMode] = Enum(default=SubscriptionMode.TARGET_DEFINED)
     # ns between samples in SAMPLE mode.
     sample_interval: Duration = Duration(default=0)
@@ -39,6 +41,9 @@ class Subscription(BaseModel[pb.Subscription]):
     heartbeat_interval: Duration = Duration(default=0)
     suppress_redundant: bool = False
 
+    @staticmethod
+    def path_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     def encode(self) -> pb.Subscription:
         submode = get_gnmi_constant(self.mode.name)

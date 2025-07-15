@@ -21,7 +21,7 @@ def test_notification():
             ),
             pb.Notification(
                 timestamp=now,
-                prefix=pb.Path(elem=[pb.PathElem(name="z")]),
+                prefix=pb.Path(elem=[pb.PathElem(name="z", key={})]),
                 delete=[
                     pb.Path(elem=[
                         pb.PathElem(name="a"),

@@ -31,7 +31,7 @@ def main():
 
         prefix = sr.update.prefix
 
-        for p in prefix.element:
+        for p in prefix.elem:
             results.append((str(prefix), type(p.encode()).__name__, "element"))
             # break
 

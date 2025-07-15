@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.model import BaseModel
 from gnmi.models.error import Error
-from gnmi.models.path import PathDescriptor
+from gnmi.models.path import Path, path_factory
 from gnmi.util import contstantize
 
 class Operation(enum.Enum):
@@ -25,10 +25,14 @@ class Operation(enum.Enum):
 
 @dataclass
 class UpdateResult(BaseModel[pb.UpdateResult]):
-    path: PathDescriptor = PathDescriptor(default=None)
+    path: t.Union[Path, pb.Path, str] = ""
     op: t.Union[Operation, int, str] = Operation.INVALID
     timestamp: t.Optional[int] = None
     error: t.Optional[Error] = None
+
+    @staticmethod
+    def path_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     @staticmethod
     def op_factory(op: t.Union[str, int, Operation]) -> Operation:

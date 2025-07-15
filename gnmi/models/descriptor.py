@@ -1,44 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-
-# import itertools
-# import types
-# import weakref
-import typing as t
-import datetime
 import enum
+import datetime
+import typing as t
 from gnmi.util import parse_duration
-
-
-# class TypeParametersMemoizer(type):
-#     _generics_cache = weakref.WeakValueDictionary()
-#
-#     def __getitem__(cls, typeparams):
-#         # prevent duplication of generic types
-#         if typeparams in cls._generics_cache:
-#             return cls._generics_cache[typeparams]
-#
-#         # middleware class for holding type parameters
-#         class TypeParamsWrapper(cls):
-#             __type_parameters__ = (
-#                 typeparams if isinstance(typeparams, tuple) else (typeparams,)
-#             )
-#
-#             @classmethod
-#             def _get_type_parameters(cls):
-#                 return cls.__type_parameters__
-#
-#         wrapper = cls._generics_cache[typeparams] = types.GenericAlias(TypeParamsWrapper, typeparams)
-#         return wrapper
-#
-# T = t.TypeVar("T")
-# class TypedDescriptor(t.Generic[T], metaclass=TypeParametersMemoizer):
-#
-#     @classmethod
-#     def _get_type_parameters(cls):
-#         raise NotImplementedError("should be overridden in metaclass")
-
 
 class Duration:
     def __init__(self, *, default: int = 0):

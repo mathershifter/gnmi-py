@@ -8,17 +8,21 @@ from dataclasses import dataclass, field
 # from gnmi.models.descriptor import ListDescriptor
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.model import BaseModel
-from gnmi.models.path import Path, PathDescriptor, path_factory
+from gnmi.models.path import Path, path_factory
 from gnmi.models.update import Update, update_list_factory
 
 
 @dataclass
 class Notification(BaseModel[pb.Notification]):
     timestamp: int
-    prefix: PathDescriptor = PathDescriptor(default="")
+    prefix: t.Optional[t.Union[str, Path]] = "" #PathDescriptor = PathDescriptor(default="")
     deletes: list[t.Union[Path, pb.Path, str]] = field(default_factory=list)
     updates: list[t.Union[Update, pb.Update, tuple]] = field(default_factory=list)
     atomic: bool = False
+
+    @staticmethod
+    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+        return path_factory(path)
 
     @staticmethod
     def updates_factory(u) -> list[Update]:
