@@ -1,20 +1,21 @@
 name: Test and build with uv
 
-on: push
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  test-build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version:
           - "3.9"
-#          - "3.10"
-#          - "3.11"
-#          - "3.12"
           - "3.13"
 
     steps:
@@ -23,8 +24,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-#      - name: Set up Python
-#        run: uv python install
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
@@ -42,3 +41,12 @@ jobs:
       - name: Run tests
         # For example, using `pytest`
         run: uv run --group test pytest tests/
+
+      - name: Build
+        run: uv build
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
