@@ -4,11 +4,19 @@
 
 import pytest
 
-from gnmi import capabilites, get, replace, update, subscribe
+from gnmi.api import _new_session
+from gnmi import capabilites, get, replace, update, subscribe, Session
 from gnmi.models import CapabilityResponse, Update, Path
 from tests.conftest import GNMI_AUTH, GNMI_TARGET
 
 pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
+
+
+def _test_new_session(target, is_insecure, tlsconfig):
+    sess = _new_session(target, insecure=is_insecure, tls=tlsconfig, auth=GNMI_AUTH)
+    assert sess is not None
+    assert isinstance(sess, Session)
+    assert "username" in sess.metadata
 
 
 def test_cap(target, is_insecure, tlsconfig):

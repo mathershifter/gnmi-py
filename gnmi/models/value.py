@@ -11,7 +11,7 @@ from decimal import Decimal
 from google.protobuf import any_pb2
 
 from gnmi.proto import gnmi_pb2 as pb
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from gnmi.decorator import deprecated
 from gnmi.models.model import BaseModel
@@ -25,16 +25,27 @@ T = t.TypeVar("T")
 )
 @dataclass
 class Decimal64(BaseModel[pb.Decimal64]):
-    dec: Decimal
-    _dec: Decimal = field(init=False, repr=False)
+    dec: t.Union[Decimal, float]
+
+    @staticmethod
+    def dec_factory(value: t.Union[Decimal, float]):
+        if isinstance(value, (str, int, tuple, Decimal)):
+            return Decimal(value)
+        elif isinstance(value, float):
+            return Decimal(str(value))
+        else:
+            raise TypeError(f"Invalid type {type(value)}")
+
 
     @property
     def digits(self) -> int:
         return int(float(self.dec) / 10 ** self.dec.as_tuple().exponent)
 
+
     @property
     def precision(self) -> int:
         return self.exponent * -1
+
 
     @property
     def exponent(self) -> int:
@@ -44,18 +55,6 @@ class Decimal64(BaseModel[pb.Decimal64]):
 
         return int(self.dec.as_tuple().exponent)
 
-    @property
-    def dec(self) -> Decimal:
-        return self._dec
-
-    @dec.setter
-    def dec(self, value: t.Union[int, float, str, tuple, Decimal]):
-        if isinstance(value, (str, int, tuple, Decimal)):
-            self._dec = Decimal(value)
-        elif isinstance(value, float):
-            self._dec = Decimal(str(value))
-        else:
-            raise TypeError(f"Invalid type {type(value)}")
 
     def __float__(self) -> float:
         return float(self.dec)

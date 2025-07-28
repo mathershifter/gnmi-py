@@ -47,8 +47,11 @@ class SubscriptionList(BaseModel[pb.SubscriptionList]):
         return path_factory(path)
 
     def encode(self) -> pb.SubscriptionList:
+        prefix = None
+        if self.prefix is not None:
+            prefix = self.prefix.encode()
         return pb.SubscriptionList(
-            prefix=self.prefix.encode(),
+            prefix=prefix,
             subscription=[s.encode() for s in self.subscriptions],
             qos=pb.QOSMarking(marking=self.qos),
             mode=get_subscription_list_mode(self.mode.name),  # self.mode.value,

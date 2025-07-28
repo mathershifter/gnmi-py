@@ -28,6 +28,8 @@ from gnmi.models import (
     GetResponse,
     SetResponse,
     Subscription,
+    SubscriptionList,
+    SubscribeRequest,
     SubscribeResponse,
     Target,
     Update,
@@ -308,14 +310,14 @@ class Session(object):
         prefix: t.Optional[str] = None,
         encoding: str = "json",
         mode: str = "stream",
-        qos: t.Optional[int] = None,
+        qos: int = 0,
         aggregate: bool = False,
         timeout: t.Optional[int] = None,
         # subscription defaults
         submode: str = "target_defined",
         suppress: bool = False,
-        interval: t.Optional[int] = None,
-        heartbeat: t.Optional[int] = None,
+        interval: int = 0,
+        heartbeat: int = 0,
     ) -> t.Iterable[SubscribeResponse]:
         r"""Subscribe to state updates from the target
 
@@ -383,16 +385,6 @@ class Session(object):
         :type: int
         :rtype: gnmi.messages.SubscribeResponse_
         """
-
-        encoding_ = util.get_gnmi_constant(encoding)
-        mode_ = util.get_subscription_list_mode(mode)
-        submode_ = util.get_gnmi_constant(submode)
-
-        prefix_ = None
-        if prefix:
-            prefix_ = Path.from_str(prefix).encode()
-        
-        qos_ = pb.QOSMarking(marking=qos)
         
         subs = []
         for sub in subscriptions:
@@ -405,31 +397,33 @@ class Session(object):
                 else:
                     path = Path.from_str(sub).encode()
 
-                sub = pb.Subscription(
+                sub = Subscription(
                     path=path,
-                    mode=submode_,
+                    mode=submode,
                     suppress_redundant=suppress,
                     sample_interval=interval,
-                    heartbeat_interval=heartbeat,
+                    heartbeat_interval=heartbeat
                 )
             else:
                 raise TypeError("sub must be a Subscription or path")
 
-            subs.append(sub.encode())
+            subs.append(sub)
 
         def _sr():
-            sub_list = pb.SubscriptionList(
-                prefix=prefix_,
-                mode=mode_,
-                allow_aggregation=aggregate,
-                encoding=encoding_,
-                subscription=subs,
-                qos=qos_,
-            )
-            yield pb.SubscribeRequest(subscribe=sub_list)
+            sr = SubscribeRequest(
+                subscribe=SubscriptionList(
+                    subscriptions=subs,
+                    prefix=prefix,
+                    mode=mode,
+                    allow_aggregation=aggregate,
+                    encoding=encoding,
+                    qos=qos
+            )).encode()
+
+            yield sr
 
         try:
-            for r in self._stub.Subscribe(_sr(), timeout, metadata=self.metadata):
+            for r in self._stub.Subscribe(_sr(), timeout=timeout, metadata=self.metadata):
                 yield SubscribeResponse.decode(r)
         except grpc.RpcError as rpcerr:
             status = Status.from_call(rpcerr)
