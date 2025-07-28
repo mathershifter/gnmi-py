@@ -7,6 +7,7 @@ import typing as t
 from gnmi.session import Session, TLSConfig, BasicAuth
 
 from gnmi.models import Notification, SetResponse
+
 __all__ = ["capabilites", "delete", "get", "replace", "subscribe", "update"]
 
 

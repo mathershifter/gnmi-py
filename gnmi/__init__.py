@@ -14,4 +14,4 @@ if sys.version_info < (3, 9):
 from gnmi.session import Session
 from gnmi.api import capabilites, delete, get, replace, subscribe, update
 
-__all__ = [Session, capabilites, delete, get, replace, subscribe, update]
+__all__ = ["Session", "capabilites", "delete", "get", "replace", "subscribe", "update"]
