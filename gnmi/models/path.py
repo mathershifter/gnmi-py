@@ -10,6 +10,7 @@ from gnmi.proto import gnmi_pb2 as pb
 from gnmi.util import escape_string
 from gnmi.models.model import BaseModel
 
+PathLike = t.Union[str, "Path", pb.Path]
 
 @dataclass
 class PathElem(BaseModel[pb.PathElem]):
@@ -77,9 +78,31 @@ class Path(BaseModel[pb.Path]):
 
         return cls(origin=origin, elem=elems)
 
+
+    def append(self, other: PathLike, force: bool = False) -> "Path":
+        other = path_factory(other)
+
+        if not force:
+            if other.origin and self.origin != other.origin:
+                raise ValueError("Cannot append path with a different origin")
+
+            if other.target and self.target != other.target:
+                raise ValueError("Cannot append path with a different targets")
+
+        return Path(
+            elem=self.elem + other.elem,
+            origin=self.origin,
+            target=self.target)
+
+
+    def __add__(self, other: t.Optional[PathLike]) -> "Path":
+        return self.append(other)
+
+
     def encode(self) -> pb.Path:
         elem = [e.encode() for e in self.elem]
         return pb.Path(elem=elem, origin=self.origin, target=self.target)
+
 
     @classmethod
     def decode(cls, path: pb.Path) -> "Path":
@@ -111,7 +134,7 @@ class Path(BaseModel[pb.Path]):
 #         setattr(inst, self._name, path_factory(value))
 
 
-def path_factory(path: t.Optional[t.Union[str, Path, pb.Path]]) -> t.Optional[Path]:
+def path_factory(path: t.Optional[PathLike]) -> t.Optional[Path]:
     if path is None:
         return None
 
@@ -178,6 +201,7 @@ def parse_elem(elem: str) -> tuple[str, dict[str, str]]:
     in_key = False
     in_escape = False
     cur = ""
+
     for ch in elem:
         if ch == '[' and not in_escape and not in_key:
             if not el:

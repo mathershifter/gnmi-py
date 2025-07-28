@@ -3,7 +3,7 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 
 from gnmi.proto import gnmi_pb2 as pb
-from gnmi.models.path import Path, split_path, parse_elem
+from gnmi.models.path import Path, PathElem, split_path, parse_elem
 
 def test_split_path():
     tests = {
@@ -114,3 +114,28 @@ def test_path():
     for t in tests:
         p, want = t
         assert Path.from_str(p).encode() == want
+
+def test_path_add():
+    tests = [
+        (
+            Path(elem=[
+                    PathElem(name="a"),
+                ],
+                origin="custom",
+                target="something"
+            ),
+            Path.from_str("b/c"),
+            pb.Path(elem=[
+                pb.PathElem(name="a"),
+                pb.PathElem(name="b"),
+                pb.PathElem(name="c"),
+            ],
+                origin="custom",
+                target="something",)
+        ),
+    ]
+
+    for t in tests:
+        base, path, want = t
+        p = base + path
+        assert p.encode() == want
