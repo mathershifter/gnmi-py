@@ -1,5 +1,5 @@
 [project]
-name = "gnmi-py"
+name = "gnmi"
 dynamic = ["version"]
 authors = [
     {name = "Jesse Mather", email = "jmather@arista.com"},
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
@@ -32,6 +32,7 @@ dev = [
     {include-group = "test"},
     "grpcio-tools==1.71.0",
     "protobuf<6.0",
+    "setuptools-scm>=8.3.1",
     "sphinx>=7.4.7",
 ]
 
@@ -43,8 +44,11 @@ all = [
     "pyyaml>=6.0.2",
 ]
 
-[tool.setuptools.dynamic]
-version = {attr = "gnmi.__version__"}
+[tool.setuptools_scm]
+#version_file = "gnmi/version.py"
+
+#[tool.setuptools_scm.scm.git]
+#describe_command = "git describe --tags --long"
 
 [tool.ruff]
 exclude = [
