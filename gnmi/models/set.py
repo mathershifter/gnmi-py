@@ -11,15 +11,15 @@ from gnmi.models.model import BaseModel
 from gnmi.models.update import Update
 from gnmi.models.update_result import UpdateResult
 from gnmi.models.error import Error
-from gnmi.models.update import update_list_factory
+from gnmi.models.update import update_list_factory, UpdateList
 
 @dataclass
 class SetRequest(BaseModel[pb.SetRequest]):
     prefix: t.Union[Path, pb.Path, str] = ""
     deletes: list[t.Union[Path, str]] = field(default_factory=list)
-    replacements: list[Update] = field(default_factory=list)
-    updates: list[Update] = field(default_factory=list)
-    union_replacements: list[Update] = field(default_factory=list)
+    replacements: UpdateList = field(default_factory=list)
+    updates: UpdateList = field(default_factory=list)
+    union_replacements: UpdateList = field(default_factory=list)
     extensions: list[ext_pb2.Extension] = field(default_factory=list)
 
     @staticmethod
@@ -28,18 +28,29 @@ class SetRequest(BaseModel[pb.SetRequest]):
 
     @staticmethod
     def deletes_factory(deletes: list[t.Union[str, Path]]) -> list[Path]:
+        if not deletes:
+            return []
         return [path_factory(d) for d in deletes]
 
     @staticmethod
     def updates_factory(d) -> list[Update]:
+        if not d:
+            return []
+
         return update_list_factory(d)
 
     @staticmethod
     def replacements_factory(d) -> list[Update]:
+        if not d:
+            return []
+
         return update_list_factory(d)
 
     @staticmethod
     def union_replacements_factory(d) -> list[Update]:
+        if not d:
+            return []
+
         return update_list_factory(d)
 
 

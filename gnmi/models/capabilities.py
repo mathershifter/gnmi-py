@@ -4,7 +4,7 @@
 
 import typing as t
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_ext_pb2 as ext_pb2
 from gnmi.models.model import BaseModel
@@ -14,7 +14,7 @@ from gnmi.util import get_gnmi_constant
 
 @dataclass
 class CapabilityRequest(BaseModel[pb.CapabilityRequest]):
-    extension: list[ext_pb2.Extension]
+    extension: list[ext_pb2.Extension] = field(default_factory=list)
 
     def encode(self) -> pb.CapabilityRequest:
         return pb.CapabilityRequest(

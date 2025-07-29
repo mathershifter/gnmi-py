@@ -40,7 +40,7 @@ def main():
 
         for update in sr.update.updates:
             path = prefix + update.path
-            for e in path.element:
+            for e in path:
                 results.append((str(path), type(e.encode()).__name__, "element"))
                 break
 

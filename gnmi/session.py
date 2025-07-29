@@ -14,6 +14,7 @@ import grpc
 from dataclasses import dataclass
 
 from gnmi.proto import gnmi_pb2 as pb # type: ignore
+from gnmi.proto import gnmi_ext_pb2 as ext_pb # type: ignore
 from gnmi.proto import gnmi_pb2_grpc # type: ignore
 
 import typing as t
@@ -22,23 +23,25 @@ import ssl
 from gnmi import util
 
 from gnmi.models import (
-    CapabilityResponse,
+    CapabilityRequest, CapabilityResponse,
+    DataType,
+    Encoding,
+    GetRequest, GetResponse,
+    ModelData,
     Path,
+    SetRequest, SetResponse,
     Status,
-    GetResponse,
-    SetResponse,
-    Subscription,
-    SubscriptionList,
-    SubscribeRequest,
-    SubscribeResponse,
+    SubscribeRequest, SubscribeResponse,
+    Subscription, SubscriptionList,
     Target,
     Update,
-    Value,
-    ValueType)
+    Value, ValueType
+)
 
 from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
 
 BasicAuth = tuple[str, str]
+
 
 @dataclass
 class TLSConfig:
@@ -59,8 +62,7 @@ class Session(object):
 
     """
 
-    def __init__(
-        self,
+    def __init__(self,
         target: str,
         metadata: t.Optional[dict] = None,
         insecure: bool = False,
@@ -81,6 +83,7 @@ class Session(object):
         self._channel = self._new_channel()
 
         self._stub = gnmi_pb2_grpc.gNMIStub(self._channel) # type: ignore
+
 
     def _new_channel(self):
         starget = f"{self.target.address.host}:{self.target.address.port}"
@@ -112,6 +115,7 @@ class Session(object):
             starget, creds, options=list(self._grpc_options.items())
         )
 
+
     @staticmethod
     def _build_path(path: t.Union[str, Path, pb.Path]) -> pb.Path:
         if isinstance(path, pb.Path):
@@ -122,6 +126,7 @@ class Session(object):
             return Path.from_str(path).encode()
         
         raise ValueError(f"failed to build path, invlaid type {type(path)}")
+
 
     @staticmethod
     def _build_update(update: t.Union[tuple[str, t.Any], tuple[str, t.Any, ValueType], Update, pb.Update]) -> pb.Update:
@@ -141,6 +146,7 @@ class Session(object):
                 raise ValueError(f"failed to build update, invlaid tuple length: {len(update)}")
             return upd
         raise ValueError(f"failed to build updates, invlaid type {type(update)}")
+
 
     def capabilities(self) -> CapabilityResponse:
         r"""Discover capabilities of the target
@@ -172,23 +178,24 @@ class Session(object):
         :rtype: gnmi.messages.CapabilityResponse_
         """
 
-        # _cr = CapabilityRequest_()
-        _cr = pb.CapabilityRequest()
+        _cr = CapabilityRequest()
+
         try:
-            response = self._stub.Capabilities(_cr, metadata=self.metadata)
+            response = self._stub.Capabilities(_cr.encode(), metadata=self.metadata)
         except grpc.RpcError as rpcerr:
             status = Status.from_call(rpcerr)
             raise GrpcError(status)
 
         return CapabilityResponse.decode(response)
 
+
     def get(self, 
             paths: list[str],
             prefix: t.Optional[str] = None,
-            encoding: str = "json",
-            data_type: str = "all",
-            # use_models: 
-            # extension:
+            encoding: Encoding = Encoding.JSON,
+            data_type: DataType = DataType.ALL,
+            models: t.Optional[list[ModelData]] = None,
+            extensions: t.Optional[list[ext_pb.Extension]] = None,
         ) -> GetResponse:
         r"""Get snapshot of state from the target
 
@@ -219,38 +226,37 @@ class Session(object):
         :type data_type: str
         :param encoding:
         :type encoding: str
-
+        :param models:
+        :type models: list[ModelData]
+        :param extensions:
+        :type extensions: list[ext_pb.Extension]
         :rtype: gnmi.messages.GetResponse_
         """
 
-        response: pb.GetResponse
-
-
-        prefix_ = None
-        if prefix:
-            prefix_ = Path.from_str(prefix).encode()
-        
-        encoding = util.get_gnmi_constant(encoding)
-        typ = util.get_datatype(data_type)
-        paths_ = [Path.from_str(p).encode() for p in paths]
-
-        _gr = pb.GetRequest(path=paths_, prefix=prefix_, encoding=encoding, type=typ)
+        _gr = GetRequest(
+            prefix=prefix,
+            paths=paths,
+            type=data_type,
+            encoding=encoding,
+            models=models,
+            extensions=extensions
+        )
 
         try:
-            response = self._stub.Get(_gr, metadata=self.metadata)
+            resp = self._stub.Get(_gr.encode(), metadata=self.metadata)
         except grpc.RpcError as rpcerr:
             status = Status.from_call(rpcerr)
             raise GrpcError(status)
 
-        return GetResponse.decode(response)
+        return GetResponse.decode(resp)
 
-    def set(
-        self,
+
+    def set(self,
         prefix: t.Optional[str] = None,
         deletes: t.Optional[list[str]] = None,
         replacements: t.Optional[list[tuple[str, t.Any]]]= None,
         updates: t.Optional[list[tuple[str, t.Any]]] = None,
-
+        union_replacements: t.Optional[list[tuple[str, t.Any]]] = None,
     ) -> SetResponse:
         r"""Set: set, update or delete value from specified path
 
@@ -269,41 +275,25 @@ class Session(object):
         :type replacements: list
         :param deletes: deletes
         :type deletes: list
-
+        :param union_replacements: union replacements
+        :type union_replacements: list
         :rtype: gnmi.messages.SetResponse_
         """
 
-        prefix_ = None
-        if prefix:
-            prefix_ = Path.from_str(prefix).encode()
-
-        delete: list[pb.Path] = []
-        replace = []
-        update = []
-
-        if deletes is not None:
-            for d in deletes:
-                delete.append(self._build_path(d))
-        if replacements is not None:
-            for r in replacements:
-                replace.append(self._build_update(r))
-        if updates is not None:
-            for u in updates:
-                update.append(self._build_update(u))
-
-        if not (updates or replacements or delete):
-            raise ValueError("nothing to update, replace or delete")
-
-        _sr = pb.SetRequest(prefix=prefix_, delete=delete, update=update, replace=replace)
+        _sr = SetRequest(
+            prefix=prefix,
+            deletes=deletes,
+            replacements=replacements,
+            updates=updates,
+            union_replacements=union_replacements
+        )
 
         try:
-            return SetResponse.decode(self._stub.Set(_sr, metadata=self.metadata))
+            return SetResponse.decode(self._stub.Set(_sr.encode(), metadata=self.metadata))
         except grpc.RpcError as rpcerr:
             status = Status.from_call(rpcerr)
             raise GrpcError(status)
 
-    # def subscribe(self,):
-    #     pass
 
     def subscribe(self, 
         subscriptions: list[t.Union[str, Path, Subscription]],
@@ -389,7 +379,7 @@ class Session(object):
         subs = []
         for sub in subscriptions:
             if isinstance(sub, Subscription):
-                pass
+                continue
             elif isinstance(sub, (str, Path)):
                 path: Path
                 if isinstance(sub, Path):
@@ -418,9 +408,8 @@ class Session(object):
                     allow_aggregation=aggregate,
                     encoding=encoding,
                     qos=qos
-            )).encode()
-
-            yield sr
+            ))
+            yield sr.encode()
 
         try:
             for r in self._stub.Subscribe(_sr(), timeout=timeout, metadata=self.metadata):
@@ -428,8 +417,6 @@ class Session(object):
         except grpc.RpcError as rpcerr:
             status = Status.from_call(rpcerr)
 
-            # server sometimes sends:
-            #    gnmi.exceptions.GrpcError: StatusCode.UNKNOWN: context deadline exceeded
             if (
                 status.code.name == "DEADLINE_EXCEEDED"
                 or status.details == "context deadline exceeded"

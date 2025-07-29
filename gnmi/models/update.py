@@ -39,10 +39,10 @@ class Update(BaseModel[pb.Update]):
 
 UpdateTuple_ = t.Union[tuple[str, t.Any], tuple[str, t.Any, int]]
 UpdateItem_ = t.Union[Update, pb.Update, UpdateTuple_]
-UpdateList_ = t.List[UpdateItem_]
+UpdateList = t.List[UpdateItem_]
 
 
-def update_list_factory(ul: UpdateList_) -> list[Update]:
+def update_list_factory(ul: UpdateList) -> list[Update]:
     if not isinstance(ul, list):
         return []
 

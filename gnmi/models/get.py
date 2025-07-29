@@ -7,9 +7,11 @@ import typing as t
 from dataclasses import dataclass, field
 
 from gnmi.models.path import Path, path_factory
-from gnmi.proto import gnmi_pb2 as pb
-from gnmi.proto import gnmi_ext_pb2 as ext_pb2
+from gnmi.proto import gnmi_pb2 as pb # type: ignore
+from gnmi.proto import gnmi_ext_pb2 as ext_pb2 # type: ignore
+from gnmi.models.encoding import Encoding
 from gnmi.models.model import BaseModel
+from gnmi.models.model_data import ModelData
 from gnmi.models.notification import Notification
 from gnmi.models.error import Error
 
@@ -24,6 +26,9 @@ class GetRequest(BaseModel[pb.GetRequest]):
     prefix: t.Union[pb.Path, Path, str] = ""
     paths: list[t.Union[str,Path]] = field(default_factory=list)
     type: DataType = DataType.ALL
+    encoding: Encoding = Encoding.JSON
+    models: list[ModelData] = field(default_factory=list)
+    extensions: list[ext_pb2.Extension] = field(default_factory=list)
 
     @staticmethod
     def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
@@ -31,12 +36,15 @@ class GetRequest(BaseModel[pb.GetRequest]):
 
     @staticmethod
     def paths_factory(paths: list[t.Union[Path, str]]) -> list[Path]:
-
         return [path_factory(p) for p in paths]
 
     def encode(self) -> pb.GetRequest:
+        pfx = None
+        if self.prefix is not None:
+            pfx = self.prefix.encode()
+
         return pb.GetRequest(
-            prefix=self.prefix.encode(),
+            prefix=pfx,
             path=[p.encode() for p in self.paths],
             type=self.type.name,
         )

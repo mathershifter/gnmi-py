@@ -2,10 +2,10 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-from gnmi.models.capabilities import CapabilityResponse
+from gnmi.models.capabilities import CapabilityRequest, CapabilityResponse
 from gnmi.models.encoding import Encoding
 from gnmi.models.error import Error
-from gnmi.models.get import GetRequest, GetResponse
+from gnmi.models.get import GetRequest, GetResponse, DataType
 from gnmi.models.model_data import ModelData
 from gnmi.models.notification import Notification
 from gnmi.models.path import PathElem, Path
@@ -20,9 +20,10 @@ from gnmi.models.value import Value, ValueType
 from gnmi.models.status import Status
 
 __all__ = [
-    "CapabilityResponse",
+    "CapabilityRequest", "CapabilityResponse",
     "Encoding",
     "Error",
+    "DataType",
     "GetRequest", "GetResponse",
     "ModelData",
     "Notification",
