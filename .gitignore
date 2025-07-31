@@ -555,3 +555,5 @@ report.xml
 .scratch*
 
 .idea
+
+.artifacts
