@@ -8,7 +8,7 @@ description = "Python gNMI client"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "grpcio==1.71.0",
+    "grpcio==1.62.3",
 ]
 
 [build-system]
@@ -30,7 +30,7 @@ test = [
 
 dev = [
     {include-group = "test"},
-    "grpcio-tools==1.71.0",
+    "grpcio-tools==1.62.3",
     "protobuf<6.0",
     "sphinx>=7.4.7",
 ]
