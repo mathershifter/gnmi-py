@@ -8,18 +8,19 @@ import pathlib
 import typing as t
 
 from collections.abc import Sequence
-from grpc import __version__ as grpc_version
-from google.protobuf import __version__ as pb_version
+from importlib.metadata import version
 
-import gnmi
+from grpc import __version__ as grpc_version
+
 from gnmi import config
 from gnmi.environments import GNMIRC_PATH
 from gnmi.constants import GNMIRC_FILES
-
 from gnmi.models import Notification
 
 def format_version():
-    elems = (gnmi.__version__, pb_version, grpc_version)
+
+    elems = (version("gnmi"), grpc_version, version("protobuf"))
+
     return "gnmip %s [protobuf %s, grpcio %s]" % elems
 
 def parse_args(args: t.Optional[Sequence[str]] = None):
@@ -126,7 +127,7 @@ def parse_args(args: t.Optional[Sequence[str]] = None):
     #     default=False,
     #     help=(
     #         "End subscription after first sync_response. This is a "
-    #         "workaround for implementions that do not support 'once' "
+    #         "workaround for implementations that do not support 'once' "
     #         "subscription mode"
     #     ),
     # )
