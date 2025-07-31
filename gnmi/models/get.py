@@ -38,6 +38,23 @@ class GetRequest(BaseModel[pb.GetRequest]):
     def paths_factory(paths: list[t.Union[Path, str]]) -> list[Path]:
         return [path_factory(p) for p in paths]
 
+    @staticmethod
+    def type_factory(typ: t.Union[str, int, DataType]) -> DataType:
+        if isinstance(typ, DataType):
+            return typ
+
+        if isinstance(typ, str):
+            typ = typ.upper()
+            try:
+                return DataType[typ]
+            except KeyError:
+                raise TypeError(f"Unknown data type {typ}")
+
+        if isinstance(typ, int):
+            return DataType(int)
+
+        raise TypeError(f"Invalid data type: {typ}")
+
     def encode(self) -> pb.GetRequest:
         pfx = None
         if self.prefix is not None:
