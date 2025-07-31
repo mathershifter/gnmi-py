@@ -1,10 +1,9 @@
 [project]
 name = "gnmi"
-dynamic = ["version"]
-authors = [
-    {name = "Jesse Mather", email = "jmather@arista.com"},
-]
+version = "0.4.2"
+maintainers = [{name = "Jesse Mather", email = "jmather@arista.com"}]
 license = "MIT"
+license-files = ["LICENSE"]
 description = "Python gNMI client"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -28,6 +27,7 @@ test = [
     "types-protobuf>=6.30.2.20250516",
     "types-pyyaml>=6.0.12.20250516",
 ]
+
 dev = [
     {include-group = "test"},
     "grpcio-tools==1.71.0",

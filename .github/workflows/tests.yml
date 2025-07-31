@@ -1,0 +1,53 @@
+name: Test and build with uv
+
+on:
+  pull_request:
+    paths-ignore: ['docs/**', 'README.md', "examples/**", "scripts/**"]
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', 'README.md', "examples/**", "scripts/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.9"
+#          - "3.10"
+#          - "3.11"
+#          - "3.12"
+#          - "3.13"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          prune-cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv run --locked --group test ruff check
+      - run: uv run --locked --group test pytest tests/
+
+#      - name: Build
+#        run: uv build
+#
+#      - name: Upload artifcats
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: release-dists-${{ matrix.python-version }}
+#          path: |
+#            dist/*.whl
+#            dist/*.tar.gz
+
+#      - name: unzip
+#      - name: Release
+#        uses: softprops/action-gh-release@v2
+#        with:
+#          files: dist/*.whl
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
