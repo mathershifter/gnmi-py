@@ -15,6 +15,7 @@ jobs:
         with:
           python-version-file: pyproject.toml
       - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
+      - run: uv run --locked --group dev sh scripts/genprotos.sh
       - run: uv build
       - uses: actions/upload-artifact@v4
         with:
