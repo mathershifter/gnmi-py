@@ -557,3 +557,6 @@ report.xml
 .idea
 
 .artifacts
+
+gnmi/proto/*.py
+gnmi/proto/*.pyi

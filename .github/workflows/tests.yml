@@ -30,6 +30,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - run: uv run --locked --group dev sh scripts/genprotos.sh
       - run: uv run --locked --group test ruff check
       - run: uv run --locked --group test pytest tests/
 
