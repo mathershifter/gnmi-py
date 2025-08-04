@@ -18,7 +18,6 @@ from gnmi.proto import gnmi_ext_pb2 as ext_pb # type: ignore
 from gnmi.proto import gnmi_pb2_grpc # type: ignore
 
 import typing as t
-import ssl
 
 from gnmi import util
 
@@ -86,19 +85,20 @@ class Session(object):
 
 
     def _new_channel(self):
-        starget = f"{self.target.address.host}:{self.target.address.port}"
+        # starget = f"{self.target.address.host}:{self.target.address.port}"
 
         if self._insecure:
-            return grpc.insecure_channel(starget)
+            return grpc.insecure_channel(self.target.address)
 
         if not self._tls:
             raise ValueError("no certificates specified, use 'insecure' to bypass")
 
         if self._tls.get_server_cert:
             # TODO: investigate/test this, add cli option
-            creds = grpc.ssl_channel_credentials(
-                ssl.get_server_certificate(self.target.address.host_port).encode()
-            )
+            # creds = grpc.ssl_channel_credentials(
+            #     ssl.get_server_certificate(self.target.address.host_port).encode()
+            # )
+            raise ValueError("unimplemented")
         else:
             root_cert = self._tls.ca_cert or None
             chain = self._tls.cert or None
@@ -112,7 +112,7 @@ class Session(object):
 
         # tgt = ":".join([str(x) for x in self.target])
         return grpc.secure_channel(
-            starget, creds, options=list(self._grpc_options.items())
+            self.target.address, creds, options=list(self._grpc_options.items())
         )
 
 
@@ -192,8 +192,8 @@ class Session(object):
     def get(self, 
             paths: list[str],
             prefix: t.Optional[str] = None,
-            encoding: Encoding = Encoding.JSON,
-            data_type: DataType = DataType.ALL,
+            encoding: t.Union[str, Encoding] = Encoding.JSON,
+            data_type: t.Union[str, DataType] = DataType.ALL,
             models: t.Optional[list[ModelData]] = None,
             extensions: t.Optional[list[ext_pb.Extension]] = None,
         ) -> GetResponse:
@@ -302,12 +302,7 @@ class Session(object):
         mode: str = "stream",
         qos: int = 0,
         aggregate: bool = False,
-        timeout: t.Optional[int] = None,
-        # subscription defaults
-        submode: str = "target_defined",
-        suppress: bool = False,
-        interval: int = 0,
-        heartbeat: int = 0,
+        timeout: t.Optional[int] = None
     ) -> t.Iterable[SubscribeResponse]:
         r"""Subscribe to state updates from the target
 
@@ -364,52 +359,19 @@ class Session(object):
         :type: bool
         :param timeout: 
         :type: int
-        #
-        :param submode:
-        :type: str
-        :param suppress:
-        :type: bool
-        :param interval:
-        :type: int
-        :param heartbeat:
-        :type: int
         :rtype: gnmi.messages.SubscribeResponse_
         """
-        
-        subs = []
-        for sub in subscriptions:
-            if isinstance(sub, Subscription):
-                continue
-            elif isinstance(sub, (str, Path)):
-                path: Path
-                if isinstance(sub, Path):
-                    path = sub
-                else:
-                    path = Path.from_str(sub).encode()
-
-                sub = Subscription(
-                    path=path,
-                    mode=submode,
-                    suppress_redundant=suppress,
-                    sample_interval=interval,
-                    heartbeat_interval=heartbeat
-                )
-            else:
-                raise TypeError("sub must be a Subscription or path")
-
-            subs.append(sub)
 
         def _sr():
-            sr = SubscribeRequest(
+            yield SubscribeRequest(
                 subscribe=SubscriptionList(
-                    subscriptions=subs,
+                    subscriptions=subscriptions,
                     prefix=prefix,
                     mode=mode,
                     allow_aggregation=aggregate,
                     encoding=encoding,
                     qos=qos
-            ))
-            yield sr.encode()
+            )).encode()
 
         try:
             for r in self._stub.Subscribe(_sr(), timeout=timeout, metadata=self.metadata):

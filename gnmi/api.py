@@ -6,7 +6,7 @@ from gnmi.exceptions import GrpcDeadlineExceeded
 import typing as t
 from gnmi.session import Session, TLSConfig, BasicAuth
 
-from gnmi.models import Notification, SetResponse
+from gnmi.models import Notification, SetResponse, Subscription
 
 __all__ = ["capabilites", "delete", "get", "replace", "subscribe", "update"]
 
@@ -192,19 +192,23 @@ def subscribe(
     :type override: str
     """
     sess = _new_session(target, auth, insecure, tls, override)
-
+    subs = []
+    for p in paths:
+        subs.append(Subscription(
+            path=p,
+            mode=submode,
+            sample_interval=interval,
+            heartbeat_interval=heartbeat,
+            suppress_redundant=suppress,
+        ))
     try:
-        for resp in sess.subscribe(paths,
+        for resp in sess.subscribe(subs,
                                    prefix=prefix,
                                    encoding=encoding,
                                    mode=mode,
                                    qos=qos,
                                    aggregate=aggregate,
-                                   timeout=timeout,
-                                   submode=submode,
-                                   suppress=suppress,
-                                   interval=interval,
-                                   heartbeat=heartbeat):
+                                   timeout=timeout):
             if resp.sync_response:
                 continue
             yield resp.update

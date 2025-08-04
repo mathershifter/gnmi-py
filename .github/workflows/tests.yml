@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  tests:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,15 +30,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - run: uv sync
       - run: uv run --locked --group dev sh scripts/genprotos.sh
       - run: uv run --locked --group test ruff check
       - run: uv run --locked --group test pytest tests/
-
-#      - name: Build
-#        run: uv build
-#
-#      - name: Upload artifcats
-#        uses: actions/upload-artifact@v4
+#      - run: uv build
+#      - uses: actions/upload-artifact@v4
 #        with:
 #          name: release-dists-${{ matrix.python-version }}
 #          path: |

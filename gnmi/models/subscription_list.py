@@ -33,7 +33,7 @@ class SubscriptionListMode(enum.Enum):
 
 @dataclass
 class SubscriptionList(BaseModel[pb.SubscriptionList]):
-    subscriptions: list[Subscription]
+    subscriptions: list[t.Union[Subscription, Path, str]]
     prefix: t.Union[pb.Path, Path, str]
     encoding: Enum[Encoding] = Enum(default=Encoding.JSON)
     mode: Enum[SubscriptionListMode] = Enum(default=SubscriptionListMode.STREAM)
@@ -41,6 +41,17 @@ class SubscriptionList(BaseModel[pb.SubscriptionList]):
     qos: int = 0
     updates_only: bool = False
     use_models: t.Optional[list[ModelData]] = None
+
+    @staticmethod
+    def subscriptions_factory(subscriptions: list[t.Union[str, Path, Subscription]]) -> list[Subscription]:
+        subs = []
+        for sub in subscriptions:
+            if isinstance(sub, (str, Path)):
+                subs.append(Subscription(path=sub))
+            elif isinstance(sub, Subscription):
+                subs.append(sub)
+        return subs
+
 
     @staticmethod
     def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:

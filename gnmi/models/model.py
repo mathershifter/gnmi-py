@@ -27,13 +27,6 @@ class BaseModel(ABC, t.Generic[T]):
 
         super().__setattr__(name, value)
 
-    @classmethod
-    def from_prototext(cls, prototext: bytes):
-        return cls()
-
-    @classmethod
-    def from_json(cls, d: t.Union[str, bytes]):
-        return cls()
 
     @abstractmethod
     def encode(self) -> T:
