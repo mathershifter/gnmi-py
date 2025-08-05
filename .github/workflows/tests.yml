@@ -31,7 +31,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync
-      - run: uv run --locked --group dev sh scripts/genprotos.sh
+      - if: ${{ matrix.python-version == '3.9' }}
+        run: uv run --locked --group dev sh scripts/genprotos.sh
       - run: uv run --locked --group test ruff check
       - run: uv run --locked --group test pytest tests/
 #      - run: uv build

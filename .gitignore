@@ -558,5 +558,5 @@ report.xml
 
 .artifacts
 
-gnmi/proto/*.py
-gnmi/proto/*.pyi
+#gnmi/proto/*.py
+#gnmi/proto/*.pyi
