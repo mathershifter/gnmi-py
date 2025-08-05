@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.9"
+          - "3.9" # EOS
           - "3.13"
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,6 @@ jobs:
             dist/*.tar.gz
 
   create-release:
-    needs: [ build ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
