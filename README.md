@@ -6,8 +6,8 @@
 
 #### General Use
 
-```bash
-pip3 install gnmi-py
+```commandline
+...
 ```
 
 #### Development
@@ -27,33 +27,36 @@ Not supported :)
 ### Usage
 
 ```
-% gnmipy --help
-usage: gnmipy [-h] [--version] [-c CONFIG] [-d] [-u USERNAME] [-p PASSWORD]
-              [--encoding {json,bytes,proto,ascii,json-ietf}]
-              [--prefix PREFIX] [--get-type {config,state,operational}]
-              [--interval INTERVAL] [--timeout TIMEOUT]
-              [--heartbeat HEARTBEAT] [--aggregate] [--suppress]
-              [--mode {stream,once,poll}]
-              [--submode {target-defined,on-change,sample}] [--once]
-              [--qos QOS] [--use-alias]
-              target {capabilities,get,subscribe} [paths [paths ...]]
+%  gnmip -h
+usage: gnmip [-h] [--version] [--pretty] [--tls-ca TLS_CA] [--tls-cert TLS_CERT] [--tls-key TLS_KEY] [--tls-get-target-certificates] [--insecure] [--host-override HOST_OVERRIDE] [--debug-grpc] [-u USERNAME]
+             [-p PASSWORD] [--encoding {json,bytes,proto,ascii,json-ietf}] [--prefix PREFIX] [--get-type {all,config,state,operational}] [--interval INTERVAL] [--heartbeat HEARTBEAT] [--aggregate]
+             [--suppress] [--mode {stream,once,poll}] [--submode {target-defined,on-change,sample}] [--qos QOS]
+             target {capabilities,get,subscribe} [paths ...]
 
 positional arguments:
   target                gNMI gRPC server
   {capabilities,get,subscribe}
                         gNMI operation [capabilities, get, subscribe]
-  paths
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
-  -c CONFIG, --config CONFIG
-                        Path to gNMI config file
+  --pretty              pretty print notifications
+  --tls-ca TLS_CA       certificate authority
+  --tls-cert TLS_CERT   client certificate
+  --tls-key TLS_KEY     client key
+  --tls-get-target-certificates
+                        retrieve certificates from the target
+  --insecure            disable TLS
+  --host-override HOST_OVERRIDE
+                        Override gRPC server hostname
 
-  -d, --debug           enable gRPC debugging
+gRPC options:
+  --debug-grpc          enable gRPC debugging
 
-  -u USERNAME, --username USERNAME
-  -p PASSWORD, --password PASSWORD
+metadata:
+  -u, --username USERNAME
+  -p, --password PASSWORD
 
 Common options:
   --encoding {json,bytes,proto,ascii,json-ietf}
@@ -61,11 +64,11 @@ Common options:
   --prefix PREFIX       gRPC path prefix (default: <empty>)
 
 Get options:
-  --get-type {config,state,operational}
+  --get-type {all,config,state,operational}
+  paths
 
 Subscribe options:
   --interval INTERVAL   sample interval in milliseconds (default: 10s)
-  --timeout TIMEOUT     subscription duration in seconds (default: None)
   --heartbeat HEARTBEAT
                         heartbeat interval in milliseconds (default: None)
   --aggregate           allow aggregation
@@ -74,11 +77,7 @@ Subscribe options:
                         Specify subscription mode
   --submode {target-defined,on-change,sample}
                         subscription sub-mode
-  --once                End subscription after first sync_response. This is a
-                        workaround for implementions that do not support
-                        'once' subscription mode
   --qos QOS             DSCP value to be set on transmitted telemetry
-  --use-alias           use aliases
 ```
 
 
@@ -88,10 +87,10 @@ Subscribe options:
 #### Command-line
 
 ```bash
-gnmipy -u admin veos1:6030 subscribe /interfaces
+gnmip --insecure --user admin localhost:50051 subscribe /interfaces
 
 # using jq to filter results
-gimpy -u admin veos1:6030 subscribe /system | \
+gnmip --insecure --user admin localhost:50051 subscribe /system | \
   jq '{time: .time, path: (.prefix + .updates[].path), value: .updates[].value}'
 ```
 
@@ -99,25 +98,5 @@ gimpy -u admin veos1:6030 subscribe /system | \
 ## API
 
 ```python
-from gnmi.structures import SubscribeOptions
-from gnmi import capabilites, get, delete, replace, update, subscribe
-from gnmi.exceptions import GrpcDeadlineExceeded
-
-paths = ["/system"]
-target = "veos:6030"
-
-for notif in get(target, paths, auth=("admin", "")):
-    prefix = notif.prefix
-    for update in notif.updates:
-        print(f"{prefix + update.path} = {update.get_value()}")
-    for delete in notif.deletes:
-        print(f"{prefix + delete} = DELETED")
-
-for notif in subscribe(target, paths, auth=("admin", ""),
-                       options=SubscribeOptions(mode="once")):
-    prefix = notif.prefix
-    for update in notif.updates:
-        print(f"{prefix + update.path} = {update.get_value()}")
-    for delete in notif.deletes:
-        print(f"{prefix + delete} = __DELETED__")
+...
 ```
