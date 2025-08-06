@@ -4,10 +4,8 @@
 
 ### Python 3
 
-#### General Use
-
 ```commandline
-...
+pip install git+https://github.com/mathershifter/gnmi-py.git
 ```
 
 #### Development
@@ -98,5 +96,16 @@ gnmip --insecure --user admin localhost:50051 subscribe /system | \
 ## API
 
 ```python
-...
+from gnmi.api import get
+
+resp = get(
+    "localhost:50051",
+    paths=["/system/config/hostname"],
+    insecure=True,
+    auth=('admin', 'admin'),
+)
+
+for notif in resp:
+    for update in notif.updates:
+        print(update)
 ```
