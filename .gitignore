@@ -553,9 +553,8 @@ MigrationBackup/
 report.xml
 
 .scratch*
-
 .idea
-
 .artifacts
+.ceos
 
 tests/assets/ca

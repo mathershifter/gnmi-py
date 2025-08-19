@@ -292,7 +292,7 @@ wheels = [
 
 [[package]]
 name = "gnmi"
-version = "0.4.6.post3.dev0"
+version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "grpcio", version = "1.62.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
