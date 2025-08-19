@@ -558,5 +558,4 @@ report.xml
 
 .artifacts
 
-#gnmi/proto/*.py
-#gnmi/proto/*.pyi
+tests/assets/ca

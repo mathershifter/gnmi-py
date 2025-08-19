@@ -3,6 +3,10 @@
 CEOS_IMAGE=${CEOS_IMAGE:-"ceoslab:4.34.1F"}
 CEOS_CONTAINER=${CEOS_CONTAINER:-"ceoslab-gnmipy"}
 
+mkdir -p "$(pwd)/.ceos/$CEOS_CONTAINER/flash"
+
+echo "DISABLE=True" > "$(pwd)/.ceos/$CEOS_CONTAINER/flash/zerotouch-config"
+
 docker rm -f "$CEOS_CONTAINER" 2> /dev/null || echo "container not found, ignoring..."
 
 docker create --rm \
@@ -17,6 +21,7 @@ docker create --rm \
   -e MAPETH0=1 \
   -e MGMT_INTF=eth0 \
   -p 50051:6030 \
+  -v "$(pwd)/.ceos/$CEOS_CONTAINER/flash:/mnt/flash" \
   -it \
   "$CEOS_IMAGE" \
   /sbin/init \

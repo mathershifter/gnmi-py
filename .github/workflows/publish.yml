@@ -20,13 +20,16 @@ jobs:
         with:
           enable-cache: true
           prune-cache: false
+
       - run: uv sync
+      - run: echo "GNMIPY_VERSION=$(uvx dunamai from any --no-metadata --style pep440)" >> $GITHUB_ENV
+      - run: uv version ${{ env.GNMIPY_VERSION }}
       - if: ${{ matrix.python-version == '3.9' }}
         run: uv run --locked --group dev sh scripts/genprotos.sh
       - run: uv build
       - uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ matrix.python-version }}
+          name: dist-${{ matrix.python-version }}-${{ env.GNMIPY_VERSION }}
           path: |
             dist/*.whl
             dist/*.tar.gz
@@ -52,3 +55,19 @@ jobs:
 #        run: gh release create --draft --repo ${{ github.repository }} ${{ github.ref_name }} dist-*/*
 #        env:
 #          GH_TOKEN: ${{ github.token }}
+# NOTES:
+#      - run: uv build
+#      - uses: actions/upload-artifact@v4
+#        with:
+#          name: release-dists-${{ matrix.python-version }}
+#          path: |
+#            dist/*.whl
+#            dist/*.tar.gz
+
+#      - name: unzip
+#      - name: Release
+#        uses: softprops/action-gh-release@v2
+#        with:
+#          files: dist/*.whl
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
