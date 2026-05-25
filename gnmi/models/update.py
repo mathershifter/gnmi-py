@@ -2,7 +2,7 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-from typing import Any, TypeVar
+from typing import Any, Sequence, TypeVar
 
 from dataclasses import dataclass
 
@@ -30,16 +30,16 @@ class Update(BaseModel[pb.Update]):
         )
 
     @classmethod
-    def decode(cls, u: pb.Update) -> "Update":
+    def decode(cls, v: pb.Update) -> "Update":
         return cls(
-            path=Path.decode(u.path),
-            value=value_factory(u.val),
-            duplicates=u.duplicates,
+            path=Path.decode(v.path),
+            value=value_factory(v.val),
+            duplicates=v.duplicates,
         )
 
 UpdateTuple_ = tuple[str, Any] | tuple[str, Any, int]
 UpdateItem_ = Update | pb.Update | UpdateTuple_
-UpdateList = list[UpdateItem_]
+UpdateList = Sequence[UpdateItem_]
 
 
 class Updates:

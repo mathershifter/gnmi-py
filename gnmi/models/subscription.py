@@ -52,11 +52,11 @@ class Subscription(BaseModel[pb.Subscription]):
         )
 
     @classmethod
-    def decode(cls, s: pb.Subscription) -> "Subscription":
+    def decode(cls, v: pb.Subscription) -> "Subscription":
         return cls(
-            path=Path.decode(s.path),
-            mode=SubscriptionMode(s.mode),
-            heartbeat_interval=s.heartbeat_interval,
-            sample_interval=s.sample_interval,
-            suppress_redundant=s.suppress_redundant,
+            path=Path.decode(v.path),
+            mode=SubscriptionMode(v.mode),
+            heartbeat_interval=v.heartbeat_interval,
+            sample_interval=v.sample_interval,
+            suppress_redundant=v.suppress_redundant,
         )

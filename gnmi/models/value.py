@@ -62,8 +62,8 @@ class Decimal64(BaseModel[pb.Decimal64]):
         return pb.Decimal64(digits=self.digits, precision=self.precision)
 
     @classmethod
-    def decode(cls, d: pb.Decimal64) -> "Decimal64":
-        return cls(d.digits / 10**d.precision)
+    def decode(cls, v: pb.Decimal64) -> "Decimal64":
+        return cls(v.digits / 10**v.precision)
 
     def decimal(self) -> Decimal:
         return Decimal(str(float(self)))
@@ -129,7 +129,7 @@ class ValueType(enum.Enum):
         return cls[contstantize(s)]
 
 @dataclass
-class Value(Generic[T], BaseModel[pb.Value]):
+class Value(Generic[T], BaseModel[pb.TypedValue]):
     val: T
     val_type: ValueType
 
@@ -165,41 +165,41 @@ class Value(Generic[T], BaseModel[pb.Value]):
         return pb.TypedValue(**params)
 
     @classmethod
-    def decode(cls, tv: pb.TypedValue) -> "Value":
-        if tv.HasField("any_val"):
-            return Value(tv.any_val, ValueType.ANY_VAL)
-        elif tv.HasField("ascii_val"):
-            return Value(tv.ascii_val, ValueType.ASCII_VAL)
-        elif tv.HasField("bool_val"):
-            return Value(tv.bool_val, ValueType.BOOL_VAL)
-        elif tv.HasField("bytes_val"):
-            return Value(tv.bytes_val, ValueType.BYTES_VAL)
-        elif tv.HasField("decimal_val"):
-            val = Decimal(tv.decimal_val.digits / 10**tv.decimal_val.precision)
+    def decode(cls, v: pb.TypedValue) -> "Value":
+        if v.HasField("any_val"):
+            return Value(v.any_val, ValueType.ANY_VAL)
+        elif v.HasField("ascii_val"):
+            return Value(v.ascii_val, ValueType.ASCII_VAL)
+        elif v.HasField("bool_val"):
+            return Value(v.bool_val, ValueType.BOOL_VAL)
+        elif v.HasField("bytes_val"):
+            return Value(v.bytes_val, ValueType.BYTES_VAL)
+        elif v.HasField("decimal_val"):
+            val = Decimal(v.decimal_val.digits / 10**v.decimal_val.precision)
             return Value(val, ValueType.DECIMAL_VAL)
-        elif tv.HasField("double_val"):
-            return Value(tv.double_val, ValueType.DOUBLE_VAL)
-        elif tv.HasField("float_val"):
-            return Value(tv.float_val, ValueType.FLOAT_VAL)
-        elif tv.HasField("int_val"):
-            return Value(tv.int_val, ValueType.INT_VAL)
-        elif tv.HasField("json_ietf_val"):
-            return Value(json.loads(tv.json_ietf_val), ValueType.JSON_IETF_VAL)
-        elif tv.HasField("json_val"):
-            return Value(json.loads(tv.json_val), ValueType.JSON_VAL)
-        elif tv.HasField("leaflist_val"):
+        elif v.HasField("double_val"):
+            return Value(v.double_val, ValueType.DOUBLE_VAL)
+        elif v.HasField("float_val"):
+            return Value(v.float_val, ValueType.FLOAT_VAL)
+        elif v.HasField("int_val"):
+            return Value(v.int_val, ValueType.INT_VAL)
+        elif v.HasField("json_ietf_val"):
+            return Value(json.loads(v.json_ietf_val), ValueType.JSON_IETF_VAL)
+        elif v.HasField("json_val"):
+            return Value(json.loads(v.json_val), ValueType.JSON_VAL)
+        elif v.HasField("leaflist_val"):
             val = []
-            for elem in tv.leaflist_val.element:
+            for elem in v.leaflist_val.element:
                 val.append(cls.decode(elem))
             return Value(val, ValueType.LEAFLIST_VAL)
-        elif tv.HasField("proto_bytes"):
-            return Value(tv.proto_bytes, ValueType.PROTO_BYTES)
-        elif tv.HasField("string_val"):
-            return Value(tv.string_val, ValueType.STRING_VAL)
-        elif tv.HasField("uint_val"):
-            return Value(tv.uint_val, ValueType.UINT_VAL)
+        elif v.HasField("proto_bytes"):
+            return Value(v.proto_bytes, ValueType.PROTO_BYTES)
+        elif v.HasField("string_val"):
+            return Value(v.string_val, ValueType.STRING_VAL)
+        elif v.HasField("uint_val"):
+            return Value(v.uint_val, ValueType.UINT_VAL)
         else:
-            raise ValueError("Unhandled typed value %s" % tv)
+            raise ValueError("Unhandled typed value %s" % v)
 
 class ValueJsonEncoder(json.JSONEncoder):
     def default(self, o):
@@ -246,6 +246,7 @@ def value_factory(v: Any) -> Value:
 
     raise ValueError("Unhandled value %s" % v)
 
+# @deprecated()
 @dataclass
 class LegacyValue(BaseModel[pb.Value]):
     value: bytes
@@ -255,5 +256,5 @@ class LegacyValue(BaseModel[pb.Value]):
         return pb.Value(value=self.value, type=get_gnmi_constant(self.type.name))
 
     @classmethod
-    def decode(cls, tv: pb.Value) -> "LegacyValue":
-        return LegacyValue(tv.value, tv.type)
+    def decode(cls, v: pb.Value) -> "LegacyValue":
+        return LegacyValue(v.value, v.type)

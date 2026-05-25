@@ -20,10 +20,10 @@ class ModelData(BaseModel[pb.ModelData]):
         )
 
     @classmethod
-    def decode(cls, data: pb.ModelData) -> "ModelData":
+    def decode(cls, v: pb.ModelData) -> "ModelData":
         return cls(
-            name=data.name,
-            organization=data.organization,
-            version=data.version
+            name=v.name,
+            organization=v.organization,
+            version=v.version
         )
 

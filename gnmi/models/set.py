@@ -56,14 +56,14 @@ class SetRequest(BaseModel[pb.SetRequest]):
         )
 
     @classmethod
-    def decode(cls, s: pb.SetRequest) -> "SetRequest":
+    def decode(cls, v: pb.SetRequest) -> "SetRequest":
         return cls(
-            prefix=Path.decode(s.prefix),
-            deletes=[Path.decode(d) for d in s.delete],
-            updates=[Update.decode(u) for u in s.update],
-            replacements=[Update.decode(r) for r in s.replace],
-            union_replacements=[Update.decode(ur) for ur in s.union_replace],
-            extensions=list(s.extension)
+            prefix=Path.decode(v.prefix),
+            deletes=[Path.decode(d) for d in v.delete],
+            updates=[Update.decode(u) for u in v.update],
+            replacements=[Update.decode(r) for r in v.replace],
+            union_replacements=[Update.decode(ur) for ur in v.union_replace],
+            extensions=list(v.extension)
         )
 
 
@@ -113,17 +113,17 @@ class SetResponse(BaseModel[pb.SetResponse]):
         )
 
     @classmethod
-    def decode(cls, s: pb.SetResponse) -> "SetResponse":
+    def decode(cls, v: pb.SetResponse) -> "SetResponse":
         msg = None
 
-        if s.message.code != 0:
-            msg = Error.decode(s.message)
+        if v.message.code != 0:
+            msg = Error.decode(v.message)
         
         return cls(
-            prefix=Path.decode(s.prefix),
-            responses=[UpdateResult.decode(u) for u in s.response],
+            prefix=Path.decode(v.prefix),
+            responses=[UpdateResult.decode(u) for u in v.response],
             message=msg,
-            timestamp=s.timestamp,
-            extensions=list(s.extension),
+            timestamp=v.timestamp,
+            extensions=list(v.extension),
 
         )

@@ -20,7 +20,7 @@ class Poll(BaseModel[pb.Poll]):
         return pb.Poll()
 
     @classmethod
-    def decode(cls, p: pb.Poll) -> "Poll":
+    def decode(cls, v: pb.Poll) -> "Poll":
         return cls()
 
 

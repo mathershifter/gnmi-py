@@ -70,8 +70,8 @@ class UpdateResult(BaseModel[pb.UpdateResult]):
         )
 
     @classmethod
-    def decode(cls, r: pb.UpdateResult) -> "UpdateResult":
+    def decode(cls, v: pb.UpdateResult) -> "UpdateResult":
         return cls(
-            path=Path.decode(r.path),
-            op=Operation(int(r.op))
+            path=Path.decode(v.path),
+            op=Operation(int(v.op))
         )

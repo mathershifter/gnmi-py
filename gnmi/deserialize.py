@@ -37,10 +37,10 @@ def deserialize(cls, data: t.Any, omit_none: bool = True) -> t.Any:
 
         v = data.get(name, None)
 
-        if v is None and omit_none:
-            continue
-
-        if m := getattr(cls, f"deserialize_{name}", None):
+        if v is None:
+            if omit_none:
+                continue
+        elif m := getattr(cls, f"deserialize_{name}", None):
             v = m(v, fld=fld)
 
         elif is_dataclass(typ):

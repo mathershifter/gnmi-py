@@ -19,22 +19,19 @@ import typing as t
 
 from gnmi import util
 
-from gnmi.models import (
-    CapabilityRequest, CapabilityResponse,
-    DataType,
-    Encoding,
-    GetRequest, GetResponse,
-    ModelData,
-    Path,
-    SetRequest, SetResponse,
-    Status,
-    SubscribeRequest, SubscribeResponse,
-    Subscription, SubscriptionList,
-    Target
-)
-
 from gnmi.certs import get_server_certificate
-from gnmi.models.path import PathLike
+
+from gnmi.models.capabilities import CapabilityRequest, CapabilityResponse
+from gnmi.models.get import DataType, GetRequest, GetResponse
+from gnmi.models.encoding import Encoding
+from gnmi.models.model_data import ModelData
+from gnmi.models.path import PathLike, Path
+from gnmi.models.set import SetRequest, SetResponse
+from gnmi.models.status import Status
+from gnmi.models.subscribe import SubscribeRequest, SubscribeResponse
+from gnmi.models.subscription import Subscription
+from gnmi.models.subscription_list import SubscriptionList
+from gnmi.models.target import Target
 from gnmi.models.update import UpdateList
 from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
 
@@ -104,7 +101,7 @@ class Session(object):
         private_key = self._tls.client_key or None
 
         if self._tls.get_server_cert:
-            server_cert = get_server_certificate(self.target, self._tls.context)
+            _ = get_server_certificate(self.target, self._tls.context)
 
         creds = grpc.ssl_channel_credentials(
             root_certificates=root_cert,
@@ -266,7 +263,7 @@ class Session(object):
 
     def subscribe(self, 
         subscriptions: list[str | Path | Subscription],
-        prefix: str | None = None,
+        prefix: PathLike | None = None,
         encoding: Encoding | str | int = "json",
         mode: str = "stream",
         qos: int = 0,

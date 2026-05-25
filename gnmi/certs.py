@@ -1,6 +1,7 @@
 import socket
 import ssl
 from typing import Any
+
 from gnmi.models.target import Target
 
 def get_server_certificate(t: Target, context: ssl.SSLContext | None = None) -> dict[str, Any] | None:

@@ -25,7 +25,5 @@ class Error(BaseModel[pb.Error]):
         return pb.Error(code=self.code, message=self.message, data=self.data)
    
     @classmethod
-    def decode(cls, err: pb.Error | None) -> "Error | None":
-        if not err:
-            return None
-        return cls(code=err.code, message=err.message, data=err.data)
+    def decode(cls, v: pb.Error) -> "Error":
+        return cls(code=v.code, message=v.message, data=v.data)

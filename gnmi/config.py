@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-import typing as t
-
+# import typing as t
+from typing import Any
 from importlib.util import find_spec
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -11,15 +11,6 @@ from gnmi import util
 from gnmi.deserialize import deserialize
 from gnmi.models.path import PathLike
 
-YAML_SUPPORTED = False
-if find_spec("yaml"):
-    import yaml
-    YAML_SUPPORTED = True
-
-# TOML_SUPPORTED = False
-# if importlib.util.find_spec("toml"):
-#     import toml
-#     TOML_SUPPORTED = True 
 
 DEFAULT_GNMI_VERSION = "latest"
 DEFAULT_HOST = "localhost"
@@ -39,7 +30,7 @@ class NotPresent(ConfigBase): ...
 
 @dataclass
 class Extension(ConfigBase):
-    ext: t.Any
+    ext: Any
 
 @dataclass
 class Capabilities(ConfigBase): ...
@@ -59,17 +50,10 @@ class Get(ConfigBase):
     prefix: PathLike = ""
     type: str = "all"
     encoding: str = "json"
-    use_models: t.Optional[list[ModelData]] = None
+    use_models: list[ModelData] | None = None
 
 
-ValType = t.Union[
-    str,
-    int,
-    bool,
-    bytes,
-    float,
-    list["ValType"],
-]
+ValType = str | int | bool | bytes | float | list["ValType"]
 
 
 @dataclass
@@ -87,11 +71,11 @@ class Update(ConfigBase):
 
 @dataclass
 class Set(ConfigBase):
-    prefix: t.Optional[str] = None
-    deletes: t.Optional[list[str]] = None
-    replacements: t.Optional[list[Update]] = None
-    updates: t.Optional[list[Update]] = None
-    union_replacements: t.Optional[list[Update]] = None
+    prefix: str | None = None
+    deletes: list[str] | None = None
+    replacements: list[Update] | None = None
+    updates: list[Update] | None = None
+    union_replacements: list[Update] | None = None
 
 @dataclass
 class Subscription(ConfigBase):
@@ -105,13 +89,13 @@ class Subscription(ConfigBase):
     heartbeat_interval: int = 0
 
     @classmethod
-    def deserialize_heartbeat(cls, dur: t.Union[str, int], **_) -> t.Optional[int]:
+    def deserialize_heartbeat(cls, dur: str | int, **_) -> int | None:
         if isinstance(dur, int):
             return dur
         return util.parse_duration(dur)
 
     @classmethod
-    def deserialize_sample_interval(cls, dur: t.Optional[t.Union[str, int]], **_) -> t.Optional[int]:
+    def deserialize_sample_interval(cls, dur: str | int | None, **_) -> int | None:
         if dur is None or isinstance(dur, int):
             return dur
         return util.parse_duration(dur)
@@ -139,25 +123,24 @@ class TlSConfig(ConfigBase):
 
 @dataclass
 class Config(ConfigBase):
-    gnmi_version: t.Optional[str] = DEFAULT_GNMI_VERSION
+    gnmi_version: str | None = DEFAULT_GNMI_VERSION
     target: str = DEFAULT_TARGET
     insecure: bool = False
-    tls: t.Optional[TlSConfig] = None
+    tls: TlSConfig | None = None
     debug_grpc: bool = False
     pretty: bool = False
     metadata: dict[str, str] = field(default_factory=dict)
-    extension: t.Optional[Extension] = None
-
-    capabilities: t.Optional[Capabilities] = None
-    get: t.Optional[Get] = None
-    set: t.Optional[Set] = None
-    subscribe: t.Optional[Subscribe] = None
+    extension: Extension | None = None
+    capabilities: Capabilities | None = None
+    get: Get | None = None
+    set: Set | None = None
+    subscribe: Subscribe | None = None
 
     # outputs: t.Optional[map[str, Output]]
 
 
     @classmethod
-    def deserialize_target(cls, tgt: t.Union[str, tuple[str, int]], **_) -> str:
+    def deserialize_target(cls, tgt: str | tuple[str, int], **_) -> str:
         if isinstance(tgt, tuple):
             if len(tgt) != 2:
                 return ":".join(tgt)
@@ -171,15 +154,22 @@ class Config(ConfigBase):
 
         raise ValueError(f"invalid target: {tgt}")
 
-def load(fn: Callable[..., dict[str, t.Any]], *args, **kwargs) -> Config: # t.Type[ConfigBase]:
+def load(fn: Callable[..., dict[str, Any]], *args, **kwargs) -> Config: # t.Type[ConfigBase]:
     cnf = deserialize(Config, fn(*args, **kwargs))
     if isinstance(cnf, Config):
         return cnf
     raise ValueError("unexpected type returned from deserialize")
 
-def yaml_loader(data: bytes) -> t.Any:
-    if not YAML_SUPPORTED:
-        raise ValueError("pyyaml module missing")
-    return yaml.safe_load(data)
+def yaml_loader(data: bytes) -> Any:
+    if find_spec("yaml"):
+        import yaml
+        return yaml.safe_load(data)
+    raise ValueError("pyyaml module missing")
 
     
+def toml_loader(data: bytes) -> Any:
+    try:
+        import toml
+        toml.load(data)
+    except ImportError:
+        raise

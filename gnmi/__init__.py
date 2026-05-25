@@ -7,9 +7,9 @@ from importlib.metadata import version
 
 __version__ = version("gnmi")
 
-if sys.version_info < (3, 9):
+if sys.version_info < (3, 10):
     # see: https://devguide.python.org/devcycle/
-    raise ValueError("Python 3.9+ is required")
+    raise ValueError("Python 3.10+ is required")
 
 
 from gnmi.session import Session

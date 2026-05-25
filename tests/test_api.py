@@ -2,6 +2,7 @@
 # Copyright (c) 2021 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
+from typing import Any
 import pytest
 
 from gnmi.api import _new_session
@@ -101,7 +102,7 @@ def test_set(target, is_insecure, tlsconfig, request):
 
     request.addfinalizer(_rollback)
 
-    updates = [("/system/config/hostname", "minemeow")]
+    updates: list[tuple[str, Any]]= [("/system/config/hostname", "minemeow")]
     gen = update(
         target,
         updates=updates,

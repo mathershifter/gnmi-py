@@ -15,7 +15,7 @@ from grpc import __version__ as grpc_version
 from gnmi import config
 from gnmi.environments import GNMIRC_PATH
 from gnmi.constants import GNMIRC_FILES
-from gnmi.models import Notification
+from gnmi.models.notification import Notification
 
 def format_version():
 

@@ -53,10 +53,10 @@ class Target(BaseModel[pb.Target]):
         )
 
     @classmethod
-    def decode(cls, tgt: pb.Target) -> "Target":
+    def decode(cls, v: pb.Target) -> "Target":
         return cls(
-            address=tgt.addresses[0],
-            metadata=dict(tgt.meta),
+            address=v.addresses[0],
+            metadata=dict(v.meta),
         )
 
     @property

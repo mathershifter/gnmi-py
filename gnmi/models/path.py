@@ -27,13 +27,13 @@ class PathElem(BaseModel[pb.PathElem]):
         return pb.PathElem(name=self.name, key=self.key)
 
     @classmethod
-    def decode(cls, elem: pb.PathElem) -> "PathElem":
+    def decode(cls, v: pb.PathElem) -> "PathElem":
         keys = {}
-        for k, v in elem.key.items():
-            keys[k] = v
+        for k, val in v.key.items():
+            keys[k] = val
 
         return cls(
-            name=elem.name,
+            name=v.name,
             key=keys,
         )
 
@@ -104,11 +104,11 @@ class Path(BaseModel[pb.Path]):
 
 
     @classmethod
-    def decode(cls, path: pb.Path) -> "Path":
+    def decode(cls, v: pb.Path) -> "Path":
         p: list[PathElem] = []
-        for elem in path.elem:
+        for elem in v.elem:
             p.append(PathElem.decode(elem))
-        return cls(p, path.origin, path.target)
+        return cls(p, v.origin, v.target)
 
 
 PathLike: TypeAlias = str | Path | pb.Path

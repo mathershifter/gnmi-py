@@ -83,14 +83,14 @@ class SubscriptionList(BaseModel[pb.SubscriptionList]):
         )
 
     @classmethod
-    def decode(cls, s: pb.SubscriptionList) -> "SubscriptionList":
+    def decode(cls, v: pb.SubscriptionList) -> "SubscriptionList":
         return cls(
-            prefix=Path.decode(s.prefix),
-            subscriptions=[Subscription.decode(sub) for sub in s.subscription],
-            qos=s.qos.marking,
-            mode=SubscriptionListMode(s.mode),
-            allow_aggregation=s.allow_aggregation,
-            use_models=[ModelData.decode(m) for m in s.use_models],
-            encoding=Encoding(s.encoding),
-            updates_only=s.updates_only,
+            prefix=Path.decode(v.prefix),
+            subscriptions=[Subscription.decode(sub) for sub in v.subscription],
+            qos=v.qos.marking,
+            mode=SubscriptionListMode(v.mode),
+            allow_aggregation=v.allow_aggregation,
+            use_models=[ModelData.decode(m) for m in v.use_models],
+            encoding=Encoding(v.encoding),
+            updates_only=v.updates_only,
         )

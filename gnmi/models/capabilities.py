@@ -20,9 +20,9 @@ class CapabilityRequest(BaseModel[pb.CapabilityRequest]):
         )
 
     @classmethod
-    def decode(cls, c: pb.CapabilityRequest) -> "CapabilityRequest":
+    def decode(cls, v: pb.CapabilityRequest) -> "CapabilityRequest":
         return CapabilityRequest(
-            extension=list(c.extension),
+            extension=list(v.extension),
         )
 
 @dataclass
@@ -39,10 +39,10 @@ class CapabilityResponse(BaseModel[pb.CapabilityResponse]):
         )
 
     @classmethod
-    def decode(cls, data: pb.CapabilityResponse) -> "CapabilityResponse":
+    def decode(cls, v: pb.CapabilityResponse) -> "CapabilityResponse":
         # data.supported_encodings
         return CapabilityResponse(
-            supported_models=[ModelData.decode(m) for m in data.supported_models],
-            supported_encodings=[Encoding(e) for e in data.supported_encodings],
-            gnmi_version=data.gNMI_version
+            supported_models=[ModelData.decode(m) for m in v.supported_models],
+            supported_encodings=[Encoding(e) for e in v.supported_encodings],
+            gnmi_version=v.gNMI_version
         )

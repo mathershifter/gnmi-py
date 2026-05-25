@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
+from typing import Iterable
 
 from gnmi.exceptions import GrpcDeadlineExceeded
-import typing as t
+
 from gnmi.session import Session, TLSConfig, BasicAuth
 
 from gnmi.models import Notification, SetResponse, Subscription
@@ -17,7 +18,7 @@ def _new_session(
     target: str,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
-    tls: t.Optional[TLSConfig] = None,
+    tls: TLSConfig | None = None,
     override: str = "",
 ):
     metadata: dict[str, str] = {}
@@ -43,7 +44,7 @@ def capabilites(
     target: str,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
-    tls: t.Optional[TLSConfig] = None,
+    tls: TLSConfig | None = None,
     override: str = "",
 ):
     """
@@ -71,14 +72,14 @@ def capabilites(
 def get(
     target: str,
     paths: list,
-    prefix: t.Optional[None] = None,
+    prefix: PathLike | None = None,
     encoding: str = "json",
     data_type: str = "all",
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
-    tls: t.Optional[TLSConfig] = None,
+    tls: TLSConfig | None = None,
     override: str = ""
-) -> t.Iterable[Notification]:
+) -> Iterable[Notification]:
     """
     Get path(s) from target
 
@@ -95,7 +96,7 @@ def get(
     :param target: gNMI target
     :type target: str
     :param prefix: Prefix path
-    :type prefix: str
+    :type prefix: PathLike
     :param paths: list paths
     :type paths: str
     :param encoding: encoding to use
@@ -128,7 +129,7 @@ def subscribe(
     target: str,
     paths: list,
     auth: BasicAuth = ("", ""),
-    prefix: t.Optional[str] = None,
+    prefix: PathLike | None = None,
     encoding: str = "json",
     #
     mode: str = "stream",
@@ -142,11 +143,11 @@ def subscribe(
     heartbeat: int = 0,
     #
     insecure: bool = False,
-    tls: t.Optional[TLSConfig] = None,
+    tls: TLSConfig | None = None,
     #
     qos: int = 0,
     override: str = "",
-) -> t.Iterable[Notification]:
+) -> Iterable[Notification]:
     """
     Subscribe to updates from target
 
@@ -166,7 +167,7 @@ def subscribe(
     :param paths: Path string
     :type paths: str
     :param prefix: Prefix path
-    :type prefix: str
+    :type prefix: PathLike
     :param encoding: encoding to use
     :type encoding: str
     :param mode: mode to use
@@ -225,7 +226,7 @@ def delete(
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
-    tls: t.Optional[TLSConfig] = None,
+    tls: TLSConfig | None = None,
     override: str = "",
 ) -> SetResponse:
     """
@@ -241,7 +242,7 @@ def delete(
     :param paths: Path strings
     :type paths: list[str]
     :param prefix: Prefix path
-    :type prefix: str
+    :type prefix: PathLike
     :param auth: username and password
     :type auth: tuple
     :param tls: SSL certificates
@@ -260,10 +261,10 @@ def delete(
 def replace(
     target: str,
     replacements: UpdateList,
-    prefix: t.Optional[str] = None,
+    prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
-    tls: t.Optional[TLSConfig] = None,
+    tls: TLSConfig | None = None,
     override: str = "",
 ) -> SetResponse:
     """
@@ -281,7 +282,7 @@ def replace(
     :param replacements: update path, value
     :type replacements: tuple
     :param prefix: Prefix path
-    :type prefix: str
+    :type prefix: PathLike
     :param auth: username and password
     :type auth: tuple
     :param tls: SSL certificates
@@ -302,7 +303,7 @@ def update(
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
-    tls: t.Optional[TLSConfig] = None,
+    tls: TLSConfig | None = None,
     override: str = "",
 ) -> SetResponse:
     """
@@ -318,7 +319,7 @@ def update(
     :param updates: update path, value
     :type updates: list[tuple]
     :param prefix: Prefix path
-    :type prefix: str
+    :type prefix: PathLike
     :param auth: username and password
     :type auth: tuple
     :param tls: SSL certificates

@@ -103,11 +103,11 @@ class GetRequest(BaseModel[pb.GetRequest]):
         )
 
     @classmethod
-    def decode(cls, gr: pb.GetRequest) -> "GetRequest":
+    def decode(cls, v: pb.GetRequest) -> "GetRequest":
         return cls(
-            prefix=gr.prefix,
-            paths=list(Path.decode(p) for p in gr.path),
-            type=DataType(int(gr.type)),
+            prefix=v.prefix,
+            paths=list(Path.decode(p) for p in v.path),
+            type=DataType(int(v.type)),
         )
 
 @dataclass
@@ -122,7 +122,7 @@ class GetResponse(BaseModel[pb.GetResponse]):
         )
 
     @classmethod
-    def decode(cls, gr: pb.GetResponse) -> "GetResponse":
+    def decode(cls, v: pb.GetResponse) -> "GetResponse":
         return cls(
-            notifications=[Notification.decode(n) for n in gr.notification],
+            notifications=[Notification.decode(n) for n in v.notification],
         )

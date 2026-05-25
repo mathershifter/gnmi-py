@@ -26,13 +26,13 @@ class Notification(BaseModel[pb.Notification]):
         return dels
 
     @classmethod
-    def decode(cls, n: pb.Notification) -> "Notification":
+    def decode(cls, v: pb.Notification) -> "Notification":
 
         return cls(
-            timestamp=n.timestamp,
-            prefix=Path.decode(n.prefix),
-            updates=[Update.decode(u) for u in n.update],
-            deletes=[Path.decode(d) for d in n.delete],
+            timestamp=v.timestamp,
+            prefix=Path.decode(v.prefix),
+            updates=[Update.decode(u) for u in v.update],
+            deletes=[Path.decode(d) for d in v.delete],
         )
 
     def encode(self) -> pb.Notification:
