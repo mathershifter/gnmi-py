@@ -1,111 +1,183 @@
-# gNMI Python Client
+# gnmi-py
 
-## Installation
+A Python [gNMI](https://github.com/openconfig/gnmi) client. Ships with a
+small Python API and a `gnmip` CLI.
 
-### Python 3
+Requires **Python 3.10 or newer**.
 
-```commandline
+## Install
+
+End users:
+
+```bash
 pip install git+https://github.com/mathershifter/gnmi-py.git
+# or, for the CLI extras (pydantic-based config):
+pip install "gnmi[cli] @ git+https://github.com/mathershifter/gnmi-py.git"
 ```
 
-#### Development
+Developers (this repo uses [`uv`](https://docs.astral.sh/uv/)):
 
 ```bash
 git clone https://github.com/mathershifter/gnmi-py.git
-# installs pipenv and requirements
-make init
-pipenv shell
+cd gnmi-py
+uv sync
+uv run pytest
 ```
 
-### Python 2
+## CLI
 
-Not supported :)
-
-
-### Usage
-
-```
-%  gnmip -h
-usage: gnmip [-h] [--version] [--pretty] [--tls-ca TLS_CA] [--tls-cert TLS_CERT] [--tls-key TLS_KEY] [--tls-get-target-certificates] [--insecure] [--host-override HOST_OVERRIDE] [--debug-grpc] [-u USERNAME]
-             [-p PASSWORD] [--encoding {json,bytes,proto,ascii,json-ietf}] [--prefix PREFIX] [--get-type {all,config,state,operational}] [--interval INTERVAL] [--heartbeat HEARTBEAT] [--aggregate]
-             [--suppress] [--mode {stream,once,poll}] [--submode {target-defined,on-change,sample}] [--qos QOS]
-             target {capabilities,get,subscribe} [paths ...]
-
-positional arguments:
-  target                gNMI gRPC server
-  {capabilities,get,subscribe}
-                        gNMI operation [capabilities, get, subscribe]
-
-options:
-  -h, --help            show this help message and exit
-  --version             show program's version number and exit
-  --pretty              pretty print notifications
-  --tls-ca TLS_CA       certificate authority
-  --tls-cert TLS_CERT   client certificate
-  --tls-key TLS_KEY     client key
-  --tls-get-target-certificates
-                        retrieve certificates from the target
-  --insecure            disable TLS
-  --host-override HOST_OVERRIDE
-                        Override gRPC server hostname
-
-gRPC options:
-  --debug-grpc          enable gRPC debugging
-
-metadata:
-  -u, --username USERNAME
-  -p, --password PASSWORD
-
-Common options:
-  --encoding {json,bytes,proto,ascii,json-ietf}
-                        set encoding
-  --prefix PREFIX       gRPC path prefix (default: <empty>)
-
-Get options:
-  --get-type {all,config,state,operational}
-  paths
-
-Subscribe options:
-  --interval INTERVAL   sample interval in milliseconds (default: 10s)
-  --heartbeat HEARTBEAT
-                        heartbeat interval in milliseconds (default: None)
-  --aggregate           allow aggregation
-  --suppress            suppress redundant
-  --mode {stream,once,poll}
-                        Specify subscription mode
-  --submode {target-defined,on-change,sample}
-                        subscription sub-mode
-  --qos QOS             DSCP value to be set on transmitted telemetry
+```text
+gnmip [target] [capabilities|get|subscribe] [paths ...]
 ```
 
+Common flags:
 
-### Examples
+| flag | what it does |
+|------|--------------|
+| `--insecure` | skip TLS (plaintext gRPC) |
+| `--tls-ca PATH` | CA cert to validate the target |
+| `--tls-cert PATH` / `--tls-key PATH` | client cert / key (mTLS) |
+| `--tls-get-target-certificates` | early-validate the target cert before opening the gRPC channel |
+| `--host-override HOST` | override the gRPC SNI / authority |
+| `-u USER` / `-p PASS` | username / password metadata |
+| `--encoding {json,bytes,proto,ascii,json-ietf}` | wire encoding |
+| `--prefix PATH` | path prefix |
 
+Subscribe-only:
 
-#### Command-line
+| flag | default |
+|------|---------|
+| `--mode {stream,once,poll}` | `stream` |
+| `--submode {target-defined,on-change,sample}` | `target-defined` |
+| `--interval N` | `10s` (sample interval) |
+| `--heartbeat N` | unset |
+| `--aggregate` / `--suppress` / `--qos N` | off / off / 0 |
+
+Examples:
 
 ```bash
-gnmip --insecure --user admin localhost:50051 subscribe /interfaces
+gnmip --insecure -u admin localhost:6030 capabilities
+gnmip --insecure -u admin localhost:6030 get /system/config/hostname
+gnmip --insecure -u admin localhost:6030 subscribe /interfaces
 
-# using jq to filter results
-gnmip --insecure --user admin localhost:50051 subscribe /system | \
+# pipe to jq
+gnmip --insecure -u admin localhost:6030 subscribe /system | \
   jq '{time: .time, path: (.prefix + .updates[].path), value: .updates[].value}'
 ```
 
+### `~/.gnmirc`
 
-## API
+`gnmip` reads `~/.gnmirc` (or `~/_gnmirc`) if present. Override the
+search directory with `GNMIRC_PATH`. The file is YAML and matches the
+shape of the `Config` model in `gnmi/config.py`. Example:
+
+```yaml
+target: r1.lab:6030
+insecure: true
+metadata:
+  username: admin
+  password: ""
+subscribe:
+  encoding: json
+  mode: stream
+  subscriptions:
+    - path: /interfaces
+      mode: on-change
+```
+
+## Python API
+
+Top-level helpers — each opens a short-lived `Session`, runs one RPC, and
+closes the channel:
 
 ```python
-from gnmi.api import get
+from gnmi import capabilities, get, subscribe, update, replace, delete
 
-resp = get(
-    "localhost:50051",
-    paths=["/system/config/hostname"],
-    insecure=True,
-    auth=('admin', 'admin'),
+resp = capabilities("localhost:6030", insecure=True, auth=("admin", ""))
+print(resp.gnmi_version)
+
+for notif in get("localhost:6030", ["/system/config/hostname"],
+                 insecure=True, auth=("admin", "")):
+    for upd in notif.updates:
+        print(upd.path, upd.value.value)
+
+for notif in subscribe("localhost:6030", ["/interfaces"],
+                       insecure=True, auth=("admin", ""), mode="once"):
+    for upd in notif.updates:
+        print(upd.path, upd.value.value)
+
+update("localhost:6030",
+       updates=[("/system/config/hostname", "router1")],
+       insecure=True, auth=("admin", ""))
+```
+
+For multiple RPCs against the same target, use `Session` directly as a
+context manager so the channel is reused and cleanly closed:
+
+```python
+from gnmi import Session
+
+with Session("localhost:6030", insecure=True,
+             metadata={"username": "admin", "password": ""}) as sess:
+    caps = sess.capabilities()
+    resp = sess.get(["/system/config/hostname"])
+    for notif in resp.notifications:
+        for upd in notif.updates:
+            print(upd.path, upd.value.value)
+```
+
+### TLS
+
+```python
+from gnmi import Session, TLSConfig
+
+with open("ca.pem", "rb") as fh:
+    ca = fh.read()
+with open("client.pem", "rb") as fh:
+    cert = fh.read()
+with open("client.key", "rb") as fh:
+    key = fh.read()
+
+tls = TLSConfig(
+    ca_cert=ca,
+    client_cert=cert,
+    client_key=key,
+    # Optional: perform an early TLS handshake against the target so a bad
+    # CA / hostname mismatch surfaces before any gNMI RPC is attempted.
+    get_server_cert=False,
 )
 
-for notif in resp:
-    for update in notif.updates:
-        print(update)
+with Session("r1.lab:6030", tls=tls) as sess:
+    print(sess.capabilities().gnmi_version)
 ```
+
+### Subscribe — handling timeouts
+
+`Session.subscribe` is a streaming iterator. Wrap it in a try/except for
+deadline handling:
+
+```python
+from gnmi import Session
+from gnmi.exceptions import GrpcDeadlineExceeded
+
+with Session("r1.lab:6030", insecure=True) as sess:
+    try:
+        for resp in sess.subscribe(["/interfaces"], timeout=10):
+            if resp.sync_response:
+                break  # ONCE mode finished
+            for upd in resp.update.updates:
+                print(upd.path, upd.value.value)
+    except GrpcDeadlineExceeded:
+        pass
+```
+
+Note: the top-level `subscribe()` helper currently swallows
+`GrpcDeadlineExceeded` (see `AUDIT.md` bug #7) — use `Session.subscribe`
+when you need to distinguish a timeout from a clean stream end.
+
+## Exceptions
+
+`gnmi.exceptions` defines:
+
+- `GrpcError` — non-OK gRPC status wrapped with a parsed `Status`
+- `GrpcDeadlineExceeded` — subclass of `GrpcError` for timeout convenience

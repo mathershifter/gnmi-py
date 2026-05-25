@@ -4,7 +4,7 @@
 
 import enum
 
-from gnmi.util import contstantize
+from gnmi.util import constantize
 
 
 class Encoding(enum.Enum):
@@ -16,7 +16,7 @@ class Encoding(enum.Enum):
 
     @classmethod
     def from_str(cls, v: str) -> "Encoding":
-        return cls[contstantize(v)]
+        return cls[constantize(v)]
 
 class EncodingDescriptor:
     _default = Encoding.JSON

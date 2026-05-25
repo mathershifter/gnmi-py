@@ -10,7 +10,7 @@ from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.model import BaseModel
 from gnmi.models.error import Error
 from gnmi.models.path import Path, PathDescriptor
-from gnmi.util import contstantize
+from gnmi.util import constantize
 
 class Operation(enum.Enum):
     INVALID = 0
@@ -21,7 +21,7 @@ class Operation(enum.Enum):
 
     @classmethod
     def from_str(cls, v: str) -> "Operation":
-        return cls[contstantize(v)]
+        return cls[constantize(v)]
 
 class OperationDescriptor:
     _default = Operation.INVALID

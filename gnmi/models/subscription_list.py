@@ -3,10 +3,10 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 import enum
 from dataclasses import dataclass, field
-
+from typing import Sequence
 from gnmi.proto import gnmi_pb2 as pb
 
-from gnmi.util import contstantize, get_subscription_list_mode, get_gnmi_constant
+from gnmi.util import constantize, get_subscription_list_mode, get_gnmi_constant
 from gnmi.models.model import BaseModel
 from gnmi.models.subscription import Subscription
 from gnmi.models.path import Path, PathDescriptor
@@ -20,7 +20,7 @@ class SubscriptionListMode(enum.Enum):
 
     @classmethod
     def from_str(cls, s: str) -> "SubscriptionListMode":
-        s = contstantize(s)
+        s = constantize(s)
         if s == "STREAM":
             return cls(cls.STREAM)
         if s == "ONCE":
@@ -30,29 +30,43 @@ class SubscriptionListMode(enum.Enum):
         raise ValueError(f"invalid subscription-list mode: {s}")
 
 class Subscriptions:
-    _default = []
+    def __init__(self):
+        self._default: Sequence[Subscription] = []
 
     def __set_name__(self, owner, name):
         self.name = "_" + name
 
     def __get__(self, instance, owner):
         if instance is None:
-            return self._default
-        return getattr(instance, self.name, self._default)
+            return []
+        return getattr(instance, self.name, [])
 
-    def __set__(self, instance, value):
+    def __set__(self, instance, value: Sequence[Subscription | pb.Subscription | Path | str]):
+        # dataclass(field(default=Subscriptions())) hands the descriptor
+        # instance back to __set__ on default construction — leave the
+        # backing attribute unset so __get__ returns the empty default.
+        if value is self:
+            return
         subs = []
-        # if isinstance(value, (str, bytes)):
-        #     Subscription(path=value)
         for s in value:
             if isinstance(s, Subscription):
                 subs.append(s)
-            if isinstance(s, (str, bytes)):
+            elif isinstance(s, Path):
+                subs.append(Subscription(path=s))
+            elif isinstance(s, (str, bytes)):
                 subs.append(Subscription(path=str(s)))
         setattr(instance, self.name, subs)
 
 @dataclass
 class SubscriptionList(BaseModel[pb.SubscriptionList]):
+    """Wire payload for a Subscribe RPC.
+
+    Bundles a list of :class:`Subscription` entries with an optional path
+    prefix, an encoding, and a stream/once/poll mode. ``Session.subscribe``
+    builds this internally; construct it directly only when wiring custom
+    requests.
+    """
+
     subscriptions: Subscriptions = field(default=Subscriptions())
     prefix: PathDescriptor = PathDescriptor()
     encoding: Enum[Encoding] = Enum(default=Encoding.JSON)
@@ -85,8 +99,8 @@ class SubscriptionList(BaseModel[pb.SubscriptionList]):
     @classmethod
     def decode(cls, v: pb.SubscriptionList) -> "SubscriptionList":
         return cls(
-            prefix=Path.decode(v.prefix),
-            subscriptions=[Subscription.decode(sub) for sub in v.subscription],
+            prefix=v.prefix,
+            subscriptions=[sub for sub in v.subscription],
             qos=v.qos.marking,
             mode=SubscriptionListMode(v.mode),
             allow_aggregation=v.allow_aggregation,

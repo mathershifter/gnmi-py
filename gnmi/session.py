@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from gnmi.proto import gnmi_ext_pb2 as ext_pb # type: ignore
 from gnmi.proto import gnmi_pb2_grpc # type: ignore
 
-import typing as t
+from typing import Sequence, Iterable
 
 from gnmi import util
 
@@ -25,7 +25,7 @@ from gnmi.models.capabilities import CapabilityRequest, CapabilityResponse
 from gnmi.models.get import DataType, GetRequest, GetResponse
 from gnmi.models.encoding import Encoding
 from gnmi.models.model_data import ModelData
-from gnmi.models.path import PathLike, Path
+from gnmi.models.path import PathLike, Path, Paths
 from gnmi.models.set import SetRequest, SetResponse
 from gnmi.models.status import Status
 from gnmi.models.subscribe import SubscribeRequest, SubscribeResponse
@@ -63,12 +63,12 @@ class Session(object):
 
     def __init__(self,
         target: str,
-        metadata: t.Optional[dict] = None,
+        metadata: dict | None = None,
         insecure: bool = False,
-        tls: t.Optional[TLSConfig] = None,
-        grpc_options: t.Optional[dict] = None,
+        tls: TLSConfig | None = None,
+        grpc_options: dict | None = None,
     ):
-        self.target = Target(address=target)
+        self.target = Target(target)
         self._tls = tls
 
         if grpc_options is None:
@@ -83,6 +83,11 @@ class Session(object):
 
         self._stub = gnmi_pb2_grpc.gNMIStub(self._channel) # type: ignore
 
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._channel.close()
 
     def _new_channel(self):
         # starget = f"{self.target.address.host}:{self.target.address.port}"
@@ -125,11 +130,10 @@ class Session(object):
             Out[4]: '0.10.0'
 
             In [5]: resp.supported_encodings
-            Out[5]: [0, 4, 3]
+            Out[5]: [<Encoding.JSON: 0>, <Encoding.PROTO: 2>, <Encoding.JSON_IETF: 4>]
 
             In [7]: for model in resp.supported_models:
-                ...:     print(model["name"], model["version"])
-                ...:     # print(model["organization])
+                ...:     print(model.name, model.version)
             openconfig-system-logging 0.3.1
             openconfig-messages 0.0.1
             openconfig-platform-types 1.0.0
@@ -141,7 +145,7 @@ class Session(object):
             openconfig-bgp 6.0.0
             ...
 
-        :rtype: gnmi.messages.CapabilityResponse_
+        :rtype: gnmi.models.capabilities.CapabilityResponse
         """
 
         _cr = CapabilityRequest()
@@ -156,7 +160,7 @@ class Session(object):
 
 
     def get(self, 
-            paths: list[PathLike],
+            paths: Sequence[PathLike],
             prefix: PathLike | None = None,
             encoding: Encoding | str | int = Encoding.JSON,
             data_type: DataType | str | int = DataType.ALL,
@@ -172,13 +176,12 @@ class Session(object):
             ...:     "/system/memory/state/physical",
             ...:     "/system/memory/state/reserved"
             ...: ]
-            In [9]: options={"prefix": "/", "encoding": "json"}
 
-            In [10]: resp = sess.get(paths, options)
+            In [9]: resp = sess.get(paths, prefix="/", encoding="json")
 
-            In [11]: for notif in resp:
-                ...:     for update in notif:
-                ...:         print(update.path, update.val)
+            In [10]: for notif in resp.notifications:
+                ...:     for update in notif.updates:
+                ...:         print(update.path, update.value)
                 ...:
             /system/config/hostname veos3-782f
             /system/memory/state/physical 2062848000
@@ -196,7 +199,7 @@ class Session(object):
         :type models: list[ModelData]
         :param extensions:
         :type extensions: list[ext_pb.Extension]
-        :rtype: gnmi.messages.GetResponse_
+        :rtype: gnmi.models.get.GetResponse
         """
 
         _gr = GetRequest(
@@ -219,7 +222,7 @@ class Session(object):
 
     def set(self,
         prefix: PathLike | None = None,
-        deletes: list[PathLike] = [],
+        deletes: Sequence[PathLike] = [],
         replacements: UpdateList = [],
         updates: UpdateList = [],
         union_replacements: UpdateList = [],
@@ -243,7 +246,7 @@ class Session(object):
         :type deletes: list
         :param union_replacements: union replacements
         :type union_replacements: list
-        :rtype: gnmi.messages.SetResponse_
+        :rtype: gnmi.models.set.SetResponse
         """
 
         _sr = SetRequest(
@@ -262,14 +265,14 @@ class Session(object):
 
 
     def subscribe(self, 
-        subscriptions: list[str | Path | Subscription],
+        subscriptions: Sequence[str | Path | Subscription],
         prefix: PathLike | None = None,
         encoding: Encoding | str | int = "json",
         mode: str = "stream",
         qos: int = 0,
         aggregate: bool = False,
-        timeout: t.Optional[int] = None
-    ) -> t.Iterable[SubscribeResponse]:
+        timeout: int | None = None
+    ) -> Iterable[SubscribeResponse]:
         r"""Subscribe to state updates from the target
 
         Usage::
@@ -280,16 +283,14 @@ class Session(object):
             ...:     "/interface[name=Ethernet1]"
             ...: ]
 
-            In [59]: options = {
-            ...:     "prefix": "/interfaces",
-            ...:     "mode": "stream",
-            ...:     "submode": "on-change",
-            ...:     "timeout": 5
-            ...:  }
+            In [59]: responses = sess.subscribe(
+            ...:     paths,
+            ...:     prefix="/interfaces",
+            ...:     mode="stream",
+            ...:     timeout=5,
+            ...: )
 
-            In [60]: responses = sess.subscribe(paths)
-
-            In [61]: try:
+            In [60]: try:
                 ...:     for resp in responses:
                 ...:         prefix = resp.update.prefix
                 ...:         for update in resp.update:
@@ -325,7 +326,7 @@ class Session(object):
         :type: bool
         :param timeout: 
         :type: int
-        :rtype: gnmi.messages.SubscribeResponse_
+        :rtype: gnmi.models.subscribe.SubscribeResponse
         """
 
         def _sr():

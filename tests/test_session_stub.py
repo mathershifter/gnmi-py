@@ -1,0 +1,128 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
+# Arista Networks, Inc. Confidential and Proprietary.
+
+"""
+Offline coverage for Session.* and api.* using the in-process gNMI stub
+server (AUDIT.md Testing #1). The existing tests in test_session.py /
+test_api.py only run when GNMI_TARGET points at a live device — these run
+unconditionally in CI.
+"""
+from __future__ import annotations
+
+import grpc
+import pytest
+
+from gnmi import api
+from gnmi.exceptions import GrpcError
+from gnmi.models import Update
+from gnmi.proto import gnmi_pb2 as pb
+from gnmi.session import Session
+
+from tests.conftest import STUB_GNMI_VERSION, STUB_HOSTNAME
+
+
+# ---------------------------------------------------------------------------
+# Session
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def session(stub_target):
+    return Session(stub_target, insecure=True, metadata={"username": "u", "password": "p"})
+
+
+def test_session_capabilities(session, stub_server):
+    resp = session.capabilities()
+    assert resp.gnmi_version == STUB_GNMI_VERSION
+    assert len(resp.supported_encodings) == 2
+    assert resp.supported_models[0].name == "openconfig-system"
+    md = dict(stub_server.servicer.last_metadata)
+    assert md.get("username") == "u"
+
+
+def test_session_get_echoes_paths(session, stub_server):
+    resp = session.get(["/system/config/hostname"])
+    assert len(resp.notifications) == 1
+    notif = resp.notifications[0]
+    assert notif.timestamp == 1
+    assert len(notif.updates) == 1
+    upd = notif.updates[0]
+    assert str(upd.path) == "/system/config/hostname"
+    assert upd.value.value == STUB_HOSTNAME
+    # Round-trip on the wire: server actually received the request.
+    assert stub_server.servicer.last_get_request is not None
+    assert len(stub_server.servicer.last_get_request.path) == 1
+
+
+def test_session_get_translates_rpc_error(session, stub_server):
+    def boom(request, context):
+        context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+        context.set_details("not allowed")
+        return pb.GetResponse()
+
+    stub_server.servicer.get_handler = boom
+    with pytest.raises(GrpcError):
+        session.get(["/x"])
+
+
+def test_session_set_round_trips_all_ops(session, stub_server):
+    resp = session.set(
+        deletes=["/a/b"],
+        replacements=[("/c/d", "v")],
+        updates=[("/e/f", "v")],
+    )
+    ops = [r.op.name for r in resp.responses]
+    assert ops == ["DELETE", "REPLACE", "UPDATE"]
+    req = stub_server.servicer.last_set_request
+    assert len(req.delete) == 1
+    assert len(req.replace) == 1
+    assert len(req.update) == 1
+
+
+def test_session_subscribe_streams_then_sync(session):
+    paths = ["/system/config/hostname", "/system/state/hostname"]
+    seen_paths: list[str] = []
+    saw_sync = False
+
+    for resp in session.subscribe(paths, mode="once"):
+        if resp.sync_response:
+            saw_sync = True
+            break
+        for upd in resp.update.updates:
+            if isinstance(upd, Update):
+                seen_paths.append(str(upd.path))
+
+    assert saw_sync
+    assert set(seen_paths) == set(paths)
+
+
+# ---------------------------------------------------------------------------
+# High-level api.* wrappers
+# ---------------------------------------------------------------------------
+
+def test_api_capabilities(stub_target):
+    resp = api.capabilities(stub_target, insecure=True)
+    assert resp.gnmi_version == STUB_GNMI_VERSION
+
+
+def test_api_get(stub_target):
+    notifs = list(api.get(stub_target, ["/system/config/hostname"], insecure=True))
+    assert len(notifs) == 1
+    assert notifs[0].updates[0].value.value == STUB_HOSTNAME
+
+
+def test_api_subscribe(stub_target):
+    notifs = list(
+        api.subscribe(stub_target, ["/system/config/hostname"], insecure=True, mode="once")
+    )
+    # api.subscribe yields notifications only (sync responses are dropped).
+    assert len(notifs) == 1
+
+
+def test_api_delete_replace_update(stub_target, stub_server):
+    api.delete(stub_target, ["/a"], insecure=True)
+    assert stub_server.servicer.last_set_request.delete
+    api.replace(stub_target, [("/b", "v")], insecure=True)
+    assert stub_server.servicer.last_set_request.replace
+    api.update(stub_target, [("/c", "v")], insecure=True)
+    assert stub_server.servicer.last_set_request.update

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from  gnmi.models.descriptor import Duration, Enum
 from gnmi.proto import gnmi_pb2 as pb
 
-from gnmi.util import contstantize, get_gnmi_constant
+from gnmi.util import constantize, get_gnmi_constant
 from gnmi.models.model import BaseModel
 from gnmi.models.path import Path, PathDescriptor
 
@@ -19,7 +19,7 @@ class SubscriptionMode(enum.Enum):
 
     @classmethod
     def from_str(cls, s: str) -> "SubscriptionMode":
-        s = contstantize(s)
+        s = constantize(s)
 
         if s == "TARGET_DEFINED":
             return cls.TARGET_DEFINED
@@ -32,6 +32,13 @@ class SubscriptionMode(enum.Enum):
 
 @dataclass
 class Subscription(BaseModel[pb.Subscription]):
+    """A single subscription entry within a ``SubscriptionList``.
+
+    Pair of (path, submode). ``sample_interval`` and ``heartbeat_interval``
+    are nanosecond Durations meaningful for ``SAMPLE`` / ``ON_CHANGE``
+    submodes; ``suppress_redundant`` skips repeats of unchanged values.
+    """
+
     path: PathDescriptor = PathDescriptor()
     mode: Enum[SubscriptionMode] = Enum(default=SubscriptionMode.TARGET_DEFINED)
     # ns between samples in SAMPLE mode.

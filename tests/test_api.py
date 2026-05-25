@@ -5,23 +5,13 @@
 from typing import Any
 import pytest
 
-from gnmi.api import _new_session
-from gnmi import capabilites, get, replace, update, subscribe, Session
+from gnmi import capabilities, get, replace, update, subscribe
 from gnmi.models import CapabilityResponse, Update, Path
-from tests.conftest import GNMI_AUTH, GNMI_TARGET
-
-pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
-
-
-def _test_new_session(target, is_insecure, tlsconfig):
-    sess = _new_session(target, insecure=is_insecure, tls=tlsconfig, auth=GNMI_AUTH)
-    assert sess is not None
-    assert isinstance(sess, Session)
-    assert "username" in sess.metadata
+from tests.conftest import GNMI_AUTH, GNMI_TARGET, requires_live_target
 
 
 def test_cap(target, is_insecure, tlsconfig):
-    response = capabilites(
+    response = capabilities(
         target, insecure=is_insecure, tls=tlsconfig, auth=GNMI_AUTH
     )
 
@@ -50,7 +40,8 @@ def test_subscribe(target, is_insecure, tlsconfig):
         insecure=is_insecure,
         tls=tlsconfig,
         auth=GNMI_AUTH,
-        timeout=2
+        mode="once",
+        timeout=2,
     )
 
     seen = {}
@@ -71,6 +62,7 @@ def test_subscribe(target, is_insecure, tlsconfig):
     assert "/interfaces/interface" in seen.keys()
 
 
+@requires_live_target
 def test_set(target, is_insecure, tlsconfig, request):
     def _get_hostname():
         resp = get(

@@ -15,6 +15,13 @@ T = TypeVar('T')
 
 @dataclass
 class Update(BaseModel[pb.Update]):
+    """A (path, value) pair within a ``Notification``.
+
+    ``duplicates`` is a counter the target may set to indicate it
+    coalesced repeated updates for the same path. The ``value`` is a
+    :class:`Value` carrying both the payload and its gNMI type tag.
+    """
+
     path: PathDescriptor = PathDescriptor()
     value: ValueDescriptor = ValueDescriptor()
     duplicates: int = 0
@@ -51,14 +58,14 @@ class Updates:
 
 
     def __set__(self, inst, value: UpdateList):
+        # See Subscriptions.__set__ — handle dataclass-default round-trip.
+        if value is self:
+            return
         if not value:
-            return []
+            return
         setattr(inst, self._name, update_list_factory(value))
 
 def update_list_factory(ul: UpdateList) -> list[Update]:
-    if not isinstance(ul, list):
-        return []
-
     return [update_factory(update) for update in ul]
 
 

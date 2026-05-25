@@ -52,12 +52,9 @@ class SubscribeRequest(BaseModel[pb.SubscribeRequest]):
 
     @classmethod
     def decode(cls, v: pb.SubscribeRequest) -> 'SubscribeRequest':
-        sub = None
-        poll = None
-
         return cls(
-            subscribe=sub,
-            poll=poll,
+            subscribe=v.subscribe and SubscriptionList.decode(v.subscribe),
+            poll=v.poll and Poll.decode(v.poll),
             extension=list(v.extension)
         )
 

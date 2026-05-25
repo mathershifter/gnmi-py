@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
+# Copyright (c) 2026 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 import signal
 import sys
@@ -12,10 +12,17 @@ from gnmi import cli, util
 def signal_handler(*_, **__):
     sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)
-
 def main():
-    cnf = cli.load_conf()
+    # Install the SIGINT handler only when actually invoked — installing
+    # at import time clobbers the handler for anyone who imports
+    # gnmi.entry (notably the test suite and library consumers).
+    signal.signal(signal.SIGINT, signal_handler)
+
+    try:
+        cnf = cli.load_conf()
+    except ImportError as e:
+        print("Please install w/ 'gnmi[cli]' to use the CLI")
+        sys.exit(1)
 
     if cnf.debug_grpc:
         util.enable_grpc_debuging()

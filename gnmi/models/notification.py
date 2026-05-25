@@ -12,6 +12,14 @@ from gnmi.models.update import Update, Updates
 
 @dataclass
 class Notification(BaseModel[pb.Notification]):
+    """A timestamped batch of path updates and deletions.
+
+    Returned by ``Get`` and ``Subscribe`` responses. Each notification
+    carries a ``timestamp`` (ns since epoch), an optional ``prefix``
+    applied to every contained path, and parallel ``updates`` / ``deletes``
+    lists. ``atomic=True`` indicates the batch must be applied as a unit.
+    """
+
     timestamp: int
     prefix: PathDescriptor = PathDescriptor(default="")
     deletes: Paths = field(default=Paths())

@@ -54,43 +54,6 @@ class GetRequest(BaseModel[pb.GetRequest]):
     models: list[ModelData] = field(default_factory=list)
     extensions: list[ext_pb2.Extension] = field(default_factory=list)
 
-    @staticmethod
-    def prefix_factory(path: pb.Path | Path | str) -> Path | None:
-        return path_factory(path)
-
-    @staticmethod
-    def paths_factory(paths: list[Path | str]) -> list[Path]:
-        if not paths:
-            return []
-
-        paths_ = []
-        for p in paths:
-            if p is None:
-                continue
-            path = path_factory(p)
-            if path is None:
-                continue
-            paths_.append(path)
-            
-        return paths_
-
-    @staticmethod
-    def type_factory(typ: str | int | DataType) -> DataType:
-        if isinstance(typ, DataType):
-            return typ
-
-        if isinstance(typ, str):
-            typ = typ.upper()
-            try:
-                return DataType[typ]
-            except KeyError:
-                raise TypeError(f"Unknown data type {typ}")
-
-        if isinstance(typ, int):
-            return DataType(int)
-
-        raise TypeError(f"Invalid data type: {typ}")
-
     def encode(self) -> pb.GetRequest:
         pfx = None
         if self.prefix and isinstance(self.prefix, Path):
@@ -98,7 +61,7 @@ class GetRequest(BaseModel[pb.GetRequest]):
 
         return pb.GetRequest(
             prefix=pfx,
-            path=[path_factory(p).encode() for p in self.paths],
+            path=[p.encode() for p in self.paths],
             type=self.type.name,
         )
 
@@ -106,7 +69,7 @@ class GetRequest(BaseModel[pb.GetRequest]):
     def decode(cls, v: pb.GetRequest) -> "GetRequest":
         return cls(
             prefix=v.prefix,
-            paths=list(Path.decode(p) for p in v.path),
+            paths=v.path,
             type=DataType(int(v.type)),
         )
 

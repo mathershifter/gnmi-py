@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from gnmi.decorator import deprecated
 from gnmi.models.model import BaseModel
 from gnmi.models.encoding import EncodingDescriptor
-from gnmi.util import contstantize, get_gnmi_constant
+from gnmi.util import constantize, get_gnmi_constant
 
 T = TypeVar("T")
 
@@ -126,10 +126,19 @@ class ValueType(enum.Enum):
 
     @classmethod
     def from_str(cls, s: str) -> "ValueType":
-        return cls[contstantize(s)]
+        return cls[constantize(s)]
 
 @dataclass
 class Value(Generic[T], BaseModel[pb.TypedValue]):
+    """A typed gNMI leaf value.
+
+    Wraps a Python payload (``val``) with an explicit ``val_type``
+    (:class:`ValueType`) so encoding picks the right oneof field on
+    ``pb.TypedValue``. Prefer constructing via tuple literals
+    ``("v", ValueType.STRING_VAL)`` or :func:`value_factory`, which
+    infers the type from the payload.
+    """
+
     val: T
     val_type: ValueType
 
@@ -148,13 +157,17 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
             val_type = ValueType.from_val(self.val)
 
         if val_type == ValueType.ANY_VAL:
-            v = str(self.val).encode()
-            params["any_val"] = any_pb2.Any(value=v)
-        elif val_type == ValueType.JSON_VAL:
+            if isinstance(self.val, bytes):
+                params["any_val"] = any_pb2.Any(value=self.val)
+            else:
+                params["any_val"] = any_pb2.Any(value=str(self.val).encode("utf-8"))
+        elif val_type in (ValueType.JSON_IETF_VAL, ValueType.JSON_VAL):
             params["json_val"] = json.dumps(self.val, cls=ValueJsonEncoder).encode("utf-8")
         elif val_type == ValueType.LEAFLIST_VAL and isinstance(self.val, list):
             sl = []
             for v in list(self.val):
+                if not isinstance(v, Value):
+                    v = Value(v, ValueType.from_val(v))
                 sl.append(v.encode())
             params["leaflist_val"] = pb.ScalarArray(element=sl)
         elif val_type == ValueType.DECIMAL_VAL:

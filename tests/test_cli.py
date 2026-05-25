@@ -3,7 +3,7 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 
 from gnmi.cli import parse_args, arg_loader
-from gnmi import config
+from gnmi.config import Config, Capabilities, Get, Subscription, Subscribe
 
 def test_arg_loader():
     tests = [
@@ -11,9 +11,9 @@ def test_arg_loader():
             [
                 "ceos1:6030", "capabilities"
             ],
-            config.Config(
+            Config(
                 target="ceos1:6030",
-                capabilities=config.Capabilities()
+                capabilities=Capabilities()
             )
         ),
         (
@@ -25,9 +25,9 @@ def test_arg_loader():
                 "interface[name=Ethernet3/1/1]/state/counters",
                 "interface[name=Ethernet3/2/1.1000]/state/counters",
             ],
-            config.Config(
+            Config(
                 target="ceos1:6030",
-                get=config.Get(
+                get=Get(
                     paths=[
                         "interface[name=Ethernet3/1/1]/state/counters",
                         "interface[name=Ethernet3/2/1.1000]/state/counters"
@@ -49,12 +49,12 @@ def test_arg_loader():
                 "interface/state/counters",
             ],
         
-            config.Config(
+            Config(
                 target="ceos1:6030",
-                subscribe=config.Subscribe(
+                subscribe=Subscribe(
                     
                     subscriptions=[
-                        config.Subscription(
+                        Subscription(
                             path="interface/state/counters",
                             mode="on-change",
                             # heartbeat_interval=10*1_000_000_000
@@ -69,7 +69,7 @@ def test_arg_loader():
     
     for t in tests:
         args, want = t
-        cnf = config.load(arg_loader, parse_args(args))
+        cnf = Config(**arg_loader(parse_args(args)))  # type: ignore
         assert cnf == want
 
 

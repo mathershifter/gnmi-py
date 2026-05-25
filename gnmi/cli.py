@@ -12,7 +12,7 @@ from importlib.metadata import version
 
 from grpc import __version__ as grpc_version
 
-from gnmi import config
+from gnmi.config import Config, load_config_file
 from gnmi.environments import GNMIRC_PATH
 from gnmi.constants import GNMIRC_FILES
 from gnmi.models.notification import Notification
@@ -40,16 +40,11 @@ def parse_args(args: t.Optional[Sequence[str]] = None):
         default=False,
         help="pretty print notifications",
     )
-    # parser.add_argument(
-    #     "-c", "--config", type=str, default=None, help="Path to gNMI config file"
-    # )
-
-    # parser.add_argument("--use-alias", action="store_true", help="use server name alias")
-
+    
     parser.add_argument("--tls-ca", default="", type=str, help="certificate authority")
     parser.add_argument("--tls-cert", default="", type=str, help="client certificate")
     parser.add_argument("--tls-key", default="", type=str, help="client key")
-    parser.add_argument("--tls-get-target-certificates", action="store_true", default=False, help="retrieve certificates from the target")
+    parser.add_argument("--tls-get-server-certificates", action="store_true", default=False, help="retrieve certificates from the target")
     parser.add_argument("--insecure", action="store_true", help="disable TLS")
     parser.add_argument(
         "--host-override", default=None, help="Override gRPC server hostname"
@@ -82,8 +77,6 @@ def parse_args(args: t.Optional[Sequence[str]] = None):
     )
     get.add_argument("paths", nargs="*", default=[])
 
-    #parser.add_argument_group("Replace options")
-
     sub = parser.add_argument_group("Subscribe options")
     sub.add_argument(
         "--interval",
@@ -91,13 +84,6 @@ def parse_args(args: t.Optional[Sequence[str]] = None):
         type=str,
         help="sample interval in milliseconds (default: 10s)",
     )
-
-    # sub.add_argument(
-    #     "--timeout",
-    #     default=None,
-    #     type=int,
-    #     help="operation timeout in seconds (default: None)",
-    # )
 
     sub.add_argument(
         "--heartbeat",
@@ -145,7 +131,6 @@ def parse_args(args: t.Optional[Sequence[str]] = None):
     return parsed
 
 def arg_loader(args: argparse.Namespace) -> dict[str, t.Any]:
-
 
     loaded = {
         # gnmi_version=
@@ -200,8 +185,8 @@ def arg_loader(args: argparse.Namespace) -> dict[str, t.Any]:
 
     return loaded
 
-def load_conf() -> config.Config:
-    return config.load(arg_loader, parse_args())
+def load_conf() -> Config:
+    return Config(**arg_loader(parse_args()))
 
 def load_rc() -> t.Any:
     path = pathlib.Path(GNMIRC_PATH)
@@ -209,8 +194,8 @@ def load_rc() -> t.Any:
         path = path / f
         if path.exists():
             with path.open("r") as fh:
-                return config.load(config.yaml_loader, fh.read())
-    return config.Config()
+                return load_config_file(str(path))
+    return Config()
 
 def write_notification(n: Notification, pretty: bool = False) -> None:
     notif: dict[str, t.Any] = {}

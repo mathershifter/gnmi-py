@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-from typing import TypeAlias
+from typing import TypeAlias, Sequence
 
 from dataclasses import dataclass, field
 
@@ -40,7 +40,16 @@ class PathElem(BaseModel[pb.PathElem]):
 
 @dataclass
 class Path(BaseModel[pb.Path]):
-    elem: list[PathElem]
+    """A gNMI path.
+
+    A sequence of :class:`PathElem` (each a name plus optional key map),
+    plus an optional ``origin`` (e.g. ``openconfig``) and ``target``.
+    Construct from a string with :meth:`Path.from_str` or by passing one
+    to ``path_factory`` / any descriptor field that accepts ``PathLike``.
+    Stringification is lossless: ``Path.from_str(str(p)) == p``.
+    """
+
+    elem: Sequence[PathElem]
     origin: str = ""
     target: str = ""
 
@@ -89,7 +98,7 @@ class Path(BaseModel[pb.Path]):
                 raise ValueError("Cannot append path with a different targets")
 
         return Path(
-            elem=self.elem + other.elem,
+            elem=list(self.elem) + list(other.elem),
             origin=self.origin,
             target=self.target)
 
@@ -143,9 +152,12 @@ class Paths:
         return getattr(inst, self._name, [])
 
 
-    def __set__(self, inst, value: list[PathLike]):
+    def __set__(self, inst, value: Sequence[PathLike]):
+        # See Subscriptions.__set__ — handle dataclass-default round-trip.
+        if value is self:
+            return
         if not value:
-            return []
+            return
         setattr(inst, self._name, [path_factory(p) for p in value])
 
 def path_factory(path: PathLike) -> Path:
@@ -162,6 +174,12 @@ def path_factory(path: PathLike) -> Path:
 
 
 def split_path(path: str) -> tuple[str, list[str]]:
+    """Slice an escaped path into (origin, [elements]).
+
+    This is a *separator-only* pass: it respects escape sequences so that
+    `\\/`, `\\[`, `\\:` aren't treated as separators, but it preserves the
+    backslash in the output. `parse_elem` does the actual unescape.
+    """
     origin = ""
     parts: list[str] = []
 
@@ -173,30 +191,33 @@ def split_path(path: str) -> tuple[str, list[str]]:
 
     ch = ""
     for ch in path:
-        if ch == '[' and not in_escape:
-            in_key = True
-
-        elif ch == ']' and not in_escape:
-            in_key = False
-
-        elif ch == '\\' and not in_escape and not in_key:
-            in_escape = True
+        if in_escape:
+            # Previous char was a backslash escape — pass this one through
+            # untouched so the element parser can still see the escape.
+            buf += ch
+            in_escape = False
             continue
 
-        elif ch == '/' and not in_escape and not in_key:
+        if ch == '\\' and not in_key:
+            in_escape = True
+            buf += ch
+            continue
+
+        if ch == '[':
+            in_key = True
+        elif ch == ']':
+            in_key = False
+        elif ch == '/' and not in_key:
             if len(buf) > 0:
                 parts.append(buf)
             buf = ""
             continue
-
-        # origin
-        if ch == ':' and not in_key and not in_escape:
+        elif ch == ':' and not in_key:
             origin = buf
             buf = ""
             continue
 
         buf += ch
-        in_escape = False
 
     if len(buf) != 0 or (len(path) != 1 and ch == '/'):
         parts.append(buf)

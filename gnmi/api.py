@@ -2,7 +2,7 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 from typing import Iterable
-
+from contextlib import contextmanager
 from gnmi.exceptions import GrpcDeadlineExceeded
 
 from gnmi.session import Session, TLSConfig, BasicAuth
@@ -11,36 +11,29 @@ from gnmi.models import Notification, SetResponse, Subscription
 from gnmi.models.path import PathLike
 from gnmi.models.update import UpdateList
 
-__all__ = ["capabilites", "delete", "get", "replace", "subscribe", "update"]
+__all__ = ["capabilities", "delete", "get", "replace", "subscribe", "update"]
 
-
-def _new_session(
-    target: str,
-    auth: BasicAuth = ("", ""),
-    insecure: bool = False,
-    tls: TLSConfig | None = None,
-    override: str = "",
-):
+def _metadata(
+    auth: BasicAuth = ("", "")
+) -> dict[str, str]:
     metadata: dict[str, str] = {}
     
     username, password = auth
     if username:
         metadata = {"username": username, "password": password or ""}
 
+    return metadata
+
+def _grpc_options(
+    override: str = ""
+) -> dict:
     grpc_options: dict = {}
     if override:
         grpc_options["server_host_override"] = override
 
-    return Session(
-        target,
-        metadata=metadata,
-        tls=tls,
-        insecure=insecure,
-        grpc_options=grpc_options,
-    )
+    return grpc_options
 
-
-def capabilites(
+def capabilities(
     target: str,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
@@ -52,21 +45,22 @@ def capabilites(
 
     Usage::
 
-        >>> capabilites("veos1:6030", auth=("admin", "p4ssw0rd"))
+        >>> capabilities("veos1:6030", auth=("admin", "p4ssw0rd"))
 
     :param target: gNMI target
     :type target: str
     :param auth: username and password
     :type auth: tuple
     :param tls: SSL certificates
-    :type tls: gnmi.structures.CertificateStore
+    :type tls: gnmi.session.TLSConfig
     :param insecure: disable TLS
     :type insecure: bool
     :param override: override hostname
     :type override: str
     """
-    sess = _new_session(target, auth, insecure, tls, override)
-    return sess.capabilities()
+
+    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return sess.capabilities()
 
 
 def get(
@@ -85,9 +79,9 @@ def get(
 
     Usage::
 
-        >>> respones = get("veos1:6030", ["/system/config"],
+        >>> responses = get("veos1:6030", ["/system/config"],
         ...     auth=("admin", "p4ssw0rd"))
-        >>> for n in respones:
+        >>> for n in responses:
         ...     for upd in n.updates:
         ...         print(upd.path, upd.val)
         ...     for path in n.deletes:
@@ -108,21 +102,20 @@ def get(
     :param insecure: insecure
     :type insecure: bool
     :param tls: SSL tls
-    :type tls: gnmi.structures.CertificateStore
+    :type tls: gnmi.session.TLSConfig
     :param override: override hostname
     :type override: str
 
     """
-    sess = _new_session(target, auth, insecure, tls, override)
-    
-    rsp = sess.get(
+    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        rsp = sess.get(
             paths,
             prefix=prefix,
             encoding=encoding,
             data_type=data_type)
 
-    for notif in rsp.notifications:
-        yield notif
+        for notif in rsp.notifications:
+            yield notif
 
 
 def subscribe(
@@ -191,34 +184,32 @@ def subscribe(
     :param insecure: insecure
     :type insecure: bool
     :param tls: SSL certificates
-    :type tls: gnmi.structures.CertificateStore
+    :type tls: gnmi.session.TLSConfig
     :param override: override hostname
     :type override: str
     """
-    sess = _new_session(target, auth, insecure, tls, override)
-    subs = []
-    for p in paths:
-        subs.append(Subscription(
-            path=p,
-            mode=submode,
+    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        subs = []
+        for p in paths:
+            subs.append(Subscription(
+                path=p,
+                mode=submode,
             sample_interval=interval,
             heartbeat_interval=heartbeat,
             suppress_redundant=suppress,
         ))
-    try:
+    
         for resp in sess.subscribe(subs,
-                                   prefix=prefix,
-                                   encoding=encoding,
-                                   mode=mode,
-                                   qos=qos,
-                                   aggregate=aggregate,
-                                   timeout=timeout):
+                                prefix=prefix,
+                                encoding=encoding,
+                                mode=mode,
+                                qos=qos,
+                                aggregate=aggregate,
+                                timeout=timeout):
             if resp.sync_response:
                 continue
             yield resp.update
 
-    except GrpcDeadlineExceeded:
-        pass
 
 def delete(
     target: str,
@@ -246,16 +237,15 @@ def delete(
     :param auth: username and password
     :type auth: tuple
     :param tls: SSL certificates
-    :type tls: gnmi.structures.CertificateStore
+    :type tls: gnmi.session.TLSConfig
     :param insecure: insecure
     :type insecure: bool
     :param override: override hostname
     :type override: str
     """
 
-    sess = _new_session(target, auth, insecure, tls, override)
-    rsp: SetResponse = sess.set(deletes=paths, prefix=prefix)
-    return rsp
+    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return sess.set(deletes=paths, prefix=prefix)
 
 
 def replace(
@@ -286,15 +276,15 @@ def replace(
     :param auth: username and password
     :type auth: tuple
     :param tls: SSL certificates
-    :type tls: gnmi.structures.CertificateStore
+    :type tls: gnmi.session.TLSConfig
     :param insecure: insecure
     :type insecure: bool
     :param override: override hostname
     :type override: str
     """
-    sess = _new_session(target, auth, insecure, tls, override)
-    rsp: SetResponse = sess.set(replacements=replacements, prefix=prefix)
-    return rsp
+    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return sess.set(replacements=replacements, prefix=prefix)
+
 
 
 def update(
@@ -310,7 +300,8 @@ def update(
     Update paths on the target
 
     Usage::
-        >>> replace("veos1:6030",
+
+        >>> update("veos1:6030",
         ...     [("/system/config/hostname", "newhostname")],
         ...     auth=("admin", "p4ssw0rd"))
 
@@ -323,12 +314,11 @@ def update(
     :param auth: username and password
     :type auth: tuple
     :param tls: SSL certificates
-    :type tls: gnmi.structures.CertificateStore
+    :type tls: gnmi.session.TLSConfig
     :param insecure: insecure
     :type insecure: bool
     :param override: override hostname
     :type override: str
     """
-    sess = _new_session(target, auth, insecure, tls, override)
-    rsp: SetResponse = sess.set(updates=updates, prefix=prefix)
-    return rsp
+    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return sess.set(updates=updates, prefix=prefix)
