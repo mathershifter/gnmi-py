@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-import typing as t
+from typing import TypeVar, Generic, Protocol
+from dataclasses import dataclass
+from abc import abstractmethod
 
-from abc import ABC, abstractmethod
-
-T = t.TypeVar('T')
+T = TypeVar('T')
 
 # def validates(prop: str):
 #     def inner(func):
@@ -19,22 +19,21 @@ T = t.TypeVar('T')
 #
 #     return inner
 
-class BaseModel(ABC, t.Generic[T]):
+@dataclass
+class BaseModel(Protocol, Generic[T]):
 
-    def __setattr__(self, name, value):
-        if hasattr(self, name+"_factory"):
-            value = getattr(self, name+"_factory")(value)
+    # def __setattr__(self, name, value):
+    #     if hasattr(self, name+"_factory"):
+    #         value = getattr(self, name+"_factory")(value)
 
-        super().__setattr__(name, value)
+    #     super().__setattr__(name, value)
 
 
     @abstractmethod
-    def encode(self) -> T:
-        pass
+    def encode(self) -> T: ...
 
     @classmethod
     @abstractmethod
-    def decode(cls, v: T) -> "BaseModel":
-        pass
+    def decode(cls, v: T) -> "BaseModel": ...
 
 

@@ -90,6 +90,6 @@ def test_notification():
 
     for test in tests:
         notif, want = test
-        # print(f"NOTIF: {notif}")
+        print(f"NOTIF: {notif.prefix} :: {want.prefix}")
         assert notif.encode() == want
         assert Notification.decode(want) == notif

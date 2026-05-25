@@ -2,16 +2,14 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 import enum
-import typing as t
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from gnmi.proto import gnmi_pb2 as pb
 
 from gnmi.util import contstantize, get_subscription_list_mode, get_gnmi_constant
 from gnmi.models.model import BaseModel
 from gnmi.models.subscription import Subscription
-from gnmi.models.path import Path, path_factory
+from gnmi.models.path import Path, PathDescriptor
 from gnmi.models.descriptor import Enum
 from gnmi.models import Encoding, ModelData
 
@@ -31,43 +29,55 @@ class SubscriptionListMode(enum.Enum):
             return cls(cls.POLL)
         raise ValueError(f"invalid subscription-list mode: {s}")
 
+class Subscriptions:
+    _default = []
+
+    def __set_name__(self, owner, name):
+        self.name = "_" + name
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self._default
+        return getattr(instance, self.name, self._default)
+
+    def __set__(self, instance, value):
+        subs = []
+        # if isinstance(value, (str, bytes)):
+        #     Subscription(path=value)
+        for s in value:
+            if isinstance(s, Subscription):
+                subs.append(s)
+            if isinstance(s, (str, bytes)):
+                subs.append(Subscription(path=str(s)))
+        setattr(instance, self.name, subs)
+
 @dataclass
 class SubscriptionList(BaseModel[pb.SubscriptionList]):
-    subscriptions: list[t.Union[Subscription, Path, str]]
-    prefix: t.Union[pb.Path, Path, str]
+    subscriptions: Subscriptions = field(default=Subscriptions())
+    prefix: PathDescriptor = PathDescriptor()
     encoding: Enum[Encoding] = Enum(default=Encoding.JSON)
     mode: Enum[SubscriptionListMode] = Enum(default=SubscriptionListMode.STREAM)
     allow_aggregation: bool = False
     qos: int = 0
     updates_only: bool = False
-    use_models: t.Optional[list[ModelData]] = None
-
-    @staticmethod
-    def subscriptions_factory(subscriptions: list[t.Union[str, Path, Subscription]]) -> list[Subscription]:
-        subs = []
-        for sub in subscriptions:
-            if isinstance(sub, (str, Path)):
-                subs.append(Subscription(path=sub))
-            elif isinstance(sub, Subscription):
-                subs.append(sub)
-        return subs
-
-
-    @staticmethod
-    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
-        return path_factory(path)
+    use_models: list[ModelData] | None = None
 
     def encode(self) -> pb.SubscriptionList:
         prefix = None
+        models = None
         if self.prefix is not None:
             prefix = self.prefix.encode()
+        
+        if self.use_models is not None:
+            models = [ModelData.encode(m) for m in self.use_models ]
+        
         return pb.SubscriptionList(
             prefix=prefix,
             subscription=[s.encode() for s in self.subscriptions],
             qos=pb.QOSMarking(marking=self.qos),
             mode=get_subscription_list_mode(self.mode.name),  # self.mode.value,
             allow_aggregation=self.allow_aggregation,
-            use_models=self.use_models,
+            use_models=models,
             encoding=get_gnmi_constant(self.encoding.name),
             updates_only=self.updates_only,
         )

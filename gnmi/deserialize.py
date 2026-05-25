@@ -29,7 +29,7 @@ def deserialize(cls, data: t.Any, omit_none: bool = True) -> t.Any:
 
     dd = {}
     for fld in fields(cls):
-        v: t.Union[t.Iterable, dict, t.Any]
+        v: t.Any
         typ = fld.type
         name = fld.name
 

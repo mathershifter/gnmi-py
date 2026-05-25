@@ -2,7 +2,6 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 import enum
-import typing as t
 
 from dataclasses import dataclass
 
@@ -11,7 +10,7 @@ from gnmi.proto import gnmi_pb2 as pb
 
 from gnmi.util import contstantize, get_gnmi_constant
 from gnmi.models.model import BaseModel
-from gnmi.models.path import Path, path_factory
+from gnmi.models.path import Path, PathDescriptor
 
 class SubscriptionMode(enum.Enum):
     TARGET_DEFINED = 0
@@ -33,7 +32,7 @@ class SubscriptionMode(enum.Enum):
 
 @dataclass
 class Subscription(BaseModel[pb.Subscription]):
-    path: t.Union[pb.Path, Path, str]
+    path: PathDescriptor = PathDescriptor()
     mode: Enum[SubscriptionMode] = Enum(default=SubscriptionMode.TARGET_DEFINED)
     # ns between samples in SAMPLE mode.
     sample_interval: Duration = Duration(default=0)
@@ -41,13 +40,9 @@ class Subscription(BaseModel[pb.Subscription]):
     heartbeat_interval: Duration = Duration(default=0)
     suppress_redundant: bool = False
 
-    @staticmethod
-    def path_factory(path: t.Union[pb.Path, Path, str]) -> Path:
-        return path_factory(path)
-
     def encode(self) -> pb.Subscription:
         submode = get_gnmi_constant(self.mode.name)
-        path_ = self.path.encode()
+        path_ = self.path.encode() if self.path else None
         return pb.Subscription(
             path=path_,
             mode=submode,
@@ -59,7 +54,7 @@ class Subscription(BaseModel[pb.Subscription]):
     @classmethod
     def decode(cls, s: pb.Subscription) -> "Subscription":
         return cls(
-            path=s.path,
+            path=Path.decode(s.path),
             mode=SubscriptionMode(s.mode),
             heartbeat_interval=s.heartbeat_interval,
             sample_interval=s.sample_interval,

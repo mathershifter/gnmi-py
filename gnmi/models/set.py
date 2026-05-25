@@ -1,62 +1,31 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-import typing as t
+
 from dataclasses import dataclass, field
 
-from gnmi.models.path import Path, path_factory
+from gnmi.models.path import Path, Paths, PathDescriptor, path_factory
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_ext_pb2 as ext_pb2
 from gnmi.models.model import BaseModel
 from gnmi.models.update import Update
 from gnmi.models.update_result import UpdateResult
-from gnmi.models.error import Error
-from gnmi.models.update import update_list_factory, UpdateList
+from gnmi.models.error import  Error
+from gnmi.models.update import Updates
 
 @dataclass
 class SetRequest(BaseModel[pb.SetRequest]):
-    prefix: t.Union[Path, pb.Path, str] = ""
-    deletes: list[t.Union[Path, str]] = field(default_factory=list)
-    replacements: UpdateList = field(default_factory=list)
-    updates: UpdateList = field(default_factory=list)
-    union_replacements: UpdateList = field(default_factory=list)
+    prefix: PathDescriptor = PathDescriptor()
+    deletes: Paths = field(default=Paths())
+    replacements: Updates = field(default=Updates())
+    updates: Updates = field(default=Updates())
+    union_replacements: Updates = field(default=Updates())
     extensions: list[ext_pb2.Extension] = field(default_factory=list)
 
-    @staticmethod
-    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
-        return path_factory(path)
-
-    @staticmethod
-    def deletes_factory(deletes: list[t.Union[str, Path]]) -> list[Path]:
-        if not deletes:
-            return []
-        return [path_factory(d) for d in deletes]
-
-    @staticmethod
-    def updates_factory(d) -> list[Update]:
-        if not d:
-            return []
-
-        return update_list_factory(d)
-
-    @staticmethod
-    def replacements_factory(d) -> list[Update]:
-        if not d:
-            return []
-
-        return update_list_factory(d)
-
-    @staticmethod
-    def union_replacements_factory(d) -> list[Update]:
-        if not d:
-            return []
-
-        return update_list_factory(d)
 
 
     def encode(self) -> pb.SetRequest:
-        pfx: t.Optional[Path] = None
-
+        pfx = None
         upds = []
         dlts = []
         reps = []
@@ -89,29 +58,29 @@ class SetRequest(BaseModel[pb.SetRequest]):
     @classmethod
     def decode(cls, s: pb.SetRequest) -> "SetRequest":
         return cls(
-            prefix=s.prefix,
-            deletes=list(s.delete),
-            updates=list(s.update),
-            replacements=list(s.replace),
-            union_replacements=list(s.union_replace),
+            prefix=Path.decode(s.prefix),
+            deletes=[Path.decode(d) for d in s.delete],
+            updates=[Update.decode(u) for u in s.update],
+            replacements=[Update.decode(r) for r in s.replace],
+            union_replacements=[Update.decode(ur) for ur in s.union_replace],
             extensions=list(s.extension)
         )
 
 
 @dataclass
 class SetResponse(BaseModel[pb.SetResponse]):
-    prefix: t.Union[Path, pb.Path, str] = ""
-    responses: list[t.Union[UpdateResult, pb.UpdateResult]] = None
-    message: Error = None
+    prefix: PathDescriptor = PathDescriptor()
+    responses: list[UpdateResult] = field(default_factory=list)
+    message: Error | None = None
     timestamp: int = 0
     extensions: list[ext_pb2.Extension] = field(default_factory=list)
 
     @staticmethod
-    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
+    def prefix_factory(path: pb.Path | Path | str) -> Path:
         return path_factory(path)
 
     @staticmethod
-    def responses_factory(responses: list[t.Union[UpdateResult, pb.UpdateResult]]) -> list[UpdateResult]:
+    def responses_factory(responses: list[UpdateResult | pb.UpdateResult]) -> list[UpdateResult]:
         rsps = []
         for r in responses:
             if isinstance(r, UpdateResult):
@@ -123,20 +92,37 @@ class SetResponse(BaseModel[pb.SetResponse]):
 
 
     def encode(self) -> pb.SetResponse:
+        pfx = None
+        msg = None
+        rsps = []
+        if self.prefix:
+            pfx = self.prefix.encode()
+
+        if self.message:
+            msg = self.message.encode()
+
+        if self.responses:
+            rsps = [r.encode() for r in self.responses]
+
         return pb.SetResponse(
-            prefix=self.prefix.encode(),
-            message=self.message.encode(),
-            response=[r.encode() for r in self.responses],
+            prefix=pfx,
+            message=msg,
+            response=rsps,
             timestamp=self.timestamp,
             extension=self.extensions
         )
 
     @classmethod
     def decode(cls, s: pb.SetResponse) -> "SetResponse":
+        msg = None
+
+        if s.message.code != 0:
+            msg = Error.decode(s.message)
+        
         return cls(
-            prefix=s.prefix,
-            responses=list(s.response),
-            message=Error.decode(s.message),
+            prefix=Path.decode(s.prefix),
+            responses=[UpdateResult.decode(u) for u in s.response],
+            message=msg,
             timestamp=s.timestamp,
             extensions=list(s.extension),
 

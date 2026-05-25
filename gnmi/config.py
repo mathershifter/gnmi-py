@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 
 from gnmi import util
 from gnmi.deserialize import deserialize
+from gnmi.models.path import PathLike
 
 YAML_SUPPORTED = False
 if find_spec("yaml"):
@@ -53,9 +54,9 @@ class ModelData(ConfigBase):
 
 @dataclass
 class Get(ConfigBase):
-    paths: list[str]
+    paths: list[PathLike]
 
-    prefix: str = ""
+    prefix: PathLike = ""
     type: str = "all"
     encoding: str = "json"
     use_models: t.Optional[list[ModelData]] = None

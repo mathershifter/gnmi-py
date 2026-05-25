@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
+from typing import TypeAlias
 
-import typing as t
 from dataclasses import dataclass, field
 
-# from gnmi.models.descriptor import ListDescriptor
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.util import escape_string
 from gnmi.models.model import BaseModel
 
-PathLike = t.Union[str, "Path", pb.Path]
+
 
 @dataclass
 class PathElem(BaseModel[pb.PathElem]):
@@ -79,7 +78,7 @@ class Path(BaseModel[pb.Path]):
         return cls(origin=origin, elem=elems)
 
 
-    def append(self, other: PathLike, force: bool = False) -> "Path":
+    def append(self, other: "str | Path | pb.Path", force: bool = False) -> "Path":
         other = path_factory(other)
 
         if not force:
@@ -95,7 +94,7 @@ class Path(BaseModel[pb.Path]):
             target=self.target)
 
 
-    def __add__(self, other: t.Optional[PathLike]) -> "Path":
+    def __add__(self, other: "str | Path | pb.Path") -> "Path":
         return self.append(other)
 
 
@@ -112,32 +111,44 @@ class Path(BaseModel[pb.Path]):
         return cls(p, path.origin, path.target)
 
 
-# class PathDescriptor:
-#     def __init__(self, *, default: t.Union[None, str, Path, pb.Path] = None):
-#         self._default = None
-#
-#         if default is not None:
-#             self._default = path_factory(default)
-#
-#
-#     def __set_name__(self, owner, name):
-#         self._name = "_"+name
-#
-#
-#     def __get__(self, inst, owner):
-#         if inst is None:
-#             return self._default
-#         return getattr(inst, self._name, self._default)
-#
-#
-#     def __set__(self, inst, value: t.Union[Path, str]):
-#         setattr(inst, self._name, path_factory(value))
+PathLike: TypeAlias = str | Path | pb.Path
+
+class PathDescriptor:
+    def __init__(self, *, default: None | PathLike = None):
+        self._default = None
+        if default is not None:
+            self._default = path_factory(default)
 
 
-def path_factory(path: t.Optional[PathLike]) -> t.Optional[Path]:
-    if path is None:
-        return None
+    def __set_name__(self, _, name):
+        self._name = "_" + name
 
+
+    def __get__(self, inst, _):
+        if inst is None:
+            return self._default
+        return getattr(inst, self._name, self._default)
+
+
+    def __set__(self, inst, value: None | PathLike):
+        if value is None:
+            return None
+        setattr(inst, self._name, path_factory(value))
+
+class Paths:
+    def __set_name__(self, _, name):
+        self._name = "_" + name
+    
+    def __get__(self, inst, _):
+        return getattr(inst, self._name, [])
+
+
+    def __set__(self, inst, value: list[PathLike]):
+        if not value:
+            return []
+        setattr(inst, self._name, [path_factory(p) for p in value])
+
+def path_factory(path: PathLike) -> Path:
     if isinstance(path, Path):
         return path
 

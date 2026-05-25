@@ -3,7 +3,7 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 import enum
 import datetime
-import typing as t
+from typing import Generic, TypeVar
 from gnmi.util import parse_duration
 
 class Duration:
@@ -19,15 +19,16 @@ class Duration:
 
         return getattr(obj, self._name, self._default)
 
-    def __set__(self, obj, value: t.Union[datetime.timedelta, int, str]):
+    def __set__(self, obj, value: datetime.timedelta | int | str):
         if isinstance(value, str):
             value = parse_duration(value)
-
+        elif isinstance(value, datetime.timedelta):
+            value = int(value.total_seconds() * 1e9)
         setattr(obj, self._name, int(value))
 
 
-E = t.TypeVar("E", bound=enum.Enum)
-class Enum(t.Generic[E]):
+E = TypeVar("E", bound=enum.Enum)
+class Enum(Generic[E]):
     def __init__(self, *, default: E):
         self._default: E = default
 
@@ -41,7 +42,7 @@ class Enum(t.Generic[E]):
         return getattr(obj, self._name, self._default)
 
 
-    def __set__(self, obj, value: t.Union[str, int, E]):
+    def __set__(self, obj, value: str | int | E):
         cls = getattr(obj, self._name, self._default).__class__
 
         if isinstance(value, cls):

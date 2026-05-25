@@ -2,8 +2,11 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-from gnmi.models import Update
+from gnmi.models.value import Value
 from gnmi.proto import gnmi_pb2 as pb
+
+from gnmi.models import Update
+from gnmi.models.path import Path
 
 def test_update():
     tests = [
@@ -17,7 +20,7 @@ def test_update():
             ),
         ),
         (
-            Update("a/b", {"another": "test"}, 1),
+            Update(Path.from_str("a/b"), {"another": "test"}, 1),
             pb.Update(path=pb.Path(elem=[
                 pb.PathElem(name="a", key={}),
                 pb.PathElem(name="b", key={}),
@@ -30,6 +33,8 @@ def test_update():
 
     for test in tests:
         have, want = test
-
-        assert Update.decode(want) == have
+        
+        assert isinstance(have.value, Value)
+        assert isinstance(have.path, Path)
         assert want == have.encode()
+        assert Update.decode(want) == have

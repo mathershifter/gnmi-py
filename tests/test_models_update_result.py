@@ -19,6 +19,7 @@ def test_update_result():
 
     for test in tests:
         have, want = test
+        path, op = have
 
-        r = UpdateResult(*have)
+        r = UpdateResult(path=path, op=op)
         assert r.encode() == want

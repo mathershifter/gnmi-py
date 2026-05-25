@@ -2,8 +2,6 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-import typing as t
-
 from dataclasses import dataclass, field
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_ext_pb2 as ext_pb2
@@ -29,8 +27,8 @@ class CapabilityRequest(BaseModel[pb.CapabilityRequest]):
 
 @dataclass
 class CapabilityResponse(BaseModel[pb.CapabilityResponse]):
-    supported_models: t.List[ModelData]
-    supported_encodings: t.List[Encoding]
+    supported_models: list[ModelData]
+    supported_encodings: list[Encoding]
     gnmi_version: str
 
     def encode(self) -> pb.CapabilityResponse:

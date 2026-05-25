@@ -5,9 +5,10 @@
 import enum
 
 import json
-import typing as t
-from decimal import Decimal
 
+from decimal import Decimal
+from functools import reduce
+from typing import Any, TypeVar, Generic
 from google.protobuf import any_pb2
 
 from gnmi.proto import gnmi_pb2 as pb
@@ -15,32 +16,26 @@ from dataclasses import dataclass
 
 from gnmi.decorator import deprecated
 from gnmi.models.model import BaseModel
-from gnmi.models.encoding import Encoding
+from gnmi.models.encoding import EncodingDescriptor
 from gnmi.util import contstantize, get_gnmi_constant
 
-T = t.TypeVar("T")
+T = TypeVar("T")
 
 @deprecated(
     "deprecated, use double_val"
 )
 @dataclass
 class Decimal64(BaseModel[pb.Decimal64]):
-    dec: t.Union[Decimal, float]
+    dec: Decimal
 
-    @staticmethod
-    def dec_factory(value: t.Union[Decimal, float]):
-        if isinstance(value, (str, int, tuple, Decimal)):
-            return Decimal(value)
-        elif isinstance(value, float):
-            return Decimal(str(value))
-        else:
-            raise TypeError(f"Invalid type {type(value)}")
-
+    @property
+    def sign(self) -> int:
+        return self.dec.as_tuple().sign
 
     @property
     def digits(self) -> int:
-        return int(float(self.dec) / 10 ** self.dec.as_tuple().exponent)
-
+        dig = self.dec.as_tuple().digits
+        return reduce(lambda x, y: x * 10 + y, dig)
 
     @property
     def precision(self) -> int:
@@ -63,6 +58,7 @@ class Decimal64(BaseModel[pb.Decimal64]):
         return str(self.dec)
 
     def encode(self) -> pb.Decimal64:
+        
         return pb.Decimal64(digits=self.digits, precision=self.precision)
 
     @classmethod
@@ -89,7 +85,7 @@ class ValueType(enum.Enum):
     PROTO_BYTES = enum.auto()
 
     @classmethod
-    def from_val(cls, v: T) -> "ValueType":
+    def from_val(cls, v: Any) -> "ValueType":
         if isinstance(v, str):
             return ValueType.STRING_VAL
         if isinstance(v, int):
@@ -104,19 +100,18 @@ class ValueType(enum.Enum):
             return ValueType.BYTES_VAL
         if isinstance(v, list):
             return ValueType.LEAFLIST_VAL
-
         if isinstance(v, dict):
             return ValueType.JSON_VAL
 
         return ValueType.ANY_VAL
 
-    def to_type(self) -> type[t.Union[Decimal64, bytes, bool, str, int, float, list]]:
+    def to_type(self) -> type[Decimal | bytes | bool | str | int | float | list]:
         m = {
             "ANY_VAL": bytes,
             "ASCII_VAL": str,
             "BOOL_VAL": bool,
             "BYTES_VAL": bytes,
-            "DECIMAL_VAL": Decimal64,
+            "DECIMAL_VAL": Decimal,
             "DOUBLE_VAL": float,
             "FLOAT_VAL": float,
             "INT_VAL": int,
@@ -134,7 +129,7 @@ class ValueType(enum.Enum):
         return cls[contstantize(s)]
 
 @dataclass
-class Value(t.Generic[T], BaseModel[pb.Value]):
+class Value(Generic[T], BaseModel[pb.Value]):
     val: T
     val_type: ValueType
 
@@ -157,13 +152,13 @@ class Value(t.Generic[T], BaseModel[pb.Value]):
             params["any_val"] = any_pb2.Any(value=v)
         elif val_type == ValueType.JSON_VAL:
             params["json_val"] = json.dumps(self.val, cls=ValueJsonEncoder).encode("utf-8")
-        elif val_type == ValueType.LEAFLIST_VAL:
+        elif val_type == ValueType.LEAFLIST_VAL and isinstance(self.val, list):
             sl = []
             for v in list(self.val):
                 sl.append(v.encode())
             params["leaflist_val"] = pb.ScalarArray(element=sl)
         elif val_type == ValueType.DECIMAL_VAL:
-            params["decimal_val"] = self.val.encode()
+                params["decimal_val"] = self.val.encode() # type: ignore[]
         else:
             params[self.val_type.name.lower()] = self.val
 
@@ -213,7 +208,7 @@ class ValueJsonEncoder(json.JSONEncoder):
         return o
 
 class ValueDescriptor:
-    def __init__(self, *, default: None):
+    def __init__(self, *, default: None = None):
         self._default = default
 
     def __set_name__(self, owner, name):
@@ -228,7 +223,7 @@ class ValueDescriptor:
     def __set__(self, instance, value):
         setattr(instance, self.name, value_factory(value))
 
-def value_type_factory(typ: t.Union[ValueType, str]) -> ValueType:
+def value_type_factory(typ: ValueType | str) -> ValueType:
     if isinstance(typ, ValueType):
         return typ
     elif isinstance(typ, str):
@@ -236,7 +231,7 @@ def value_type_factory(typ: t.Union[ValueType, str]) -> ValueType:
     else:
         raise ValueError("Unhandled typed value %s" % typ)
 
-def value_factory(v) -> Value:
+def value_factory(v: Any) -> Value:
     if isinstance(v, Value):
         return v
     elif isinstance(v, pb.TypedValue):
@@ -254,18 +249,11 @@ def value_factory(v) -> Value:
 @dataclass
 class LegacyValue(BaseModel[pb.Value]):
     value: bytes
-    type: Encoding
-    #
-    # def extract_val(self) -> t.Any:
-    #     if self.type.name in ("JSON_IETF", "JSON", "BYTES", "PROTO") and self.value:
-    #         return self.value
-    #     elif self.type.name == "ASCII":
-    #         return str(self.value)
-    #     raise ValueError("Unhandled type of value %s" % str(self.value))
+    type: EncodingDescriptor
 
     def encode(self) -> pb.Value:
         return pb.Value(value=self.value, type=get_gnmi_constant(self.type.name))
 
     @classmethod
     def decode(cls, tv: pb.Value) -> "LegacyValue":
-        return LegacyValue(tv.value, Encoding.from_str(str(tv.type)))
+        return LegacyValue(tv.value, tv.type)

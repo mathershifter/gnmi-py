@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-
-import typing as t
-
+from typing import Any
 from dataclasses import dataclass
 import grpc
 
@@ -11,7 +9,7 @@ import grpc
 class Status:
     code: grpc.StatusCode
     details: str
-    trailing_metadata: t.Any
+    trailing_metadata: Any
 
     @classmethod
     def from_call(cls, call) -> "Status":

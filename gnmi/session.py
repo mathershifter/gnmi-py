@@ -8,12 +8,10 @@ gnmi.session
 Implementation if gnmi.session API
 
 """
-# import enum
-
+import ssl
 import grpc
 from dataclasses import dataclass
 
-from gnmi.proto import gnmi_pb2 as pb # type: ignore
 from gnmi.proto import gnmi_ext_pb2 as ext_pb # type: ignore
 from gnmi.proto import gnmi_pb2_grpc # type: ignore
 
@@ -32,11 +30,12 @@ from gnmi.models import (
     Status,
     SubscribeRequest, SubscribeResponse,
     Subscription, SubscriptionList,
-    Target,
-    Update,
-    Value, ValueType
+    Target
 )
 
+from gnmi.certs import get_server_certificate
+from gnmi.models.path import PathLike
+from gnmi.models.update import UpdateList
 from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
 
 BasicAuth = tuple[str, str]
@@ -45,9 +44,13 @@ BasicAuth = tuple[str, str]
 @dataclass
 class TLSConfig:
     ca_cert: bytes
-    cert: bytes
-    key: bytes
+    client_cert: bytes
+    client_key: bytes
     get_server_cert: bool = False
+
+    @property
+    def context(self):
+        return ssl.create_default_context(cadata=self.ca_cert)
 
 
 class Session(object):
@@ -93,59 +96,25 @@ class Session(object):
         if not self._tls:
             raise ValueError("no certificates specified, use 'insecure' to bypass")
 
+        
+        
+        root_cert = self._tls.ca_cert or None
+        
+        chain = self._tls.client_cert or None
+        private_key = self._tls.client_key or None
+
         if self._tls.get_server_cert:
-            # TODO: investigate/test this, add cli option
-            # creds = grpc.ssl_channel_credentials(
-            #     ssl.get_server_certificate(self.target.address.host_port).encode()
-            # )
-            raise ValueError("unimplemented")
-        else:
-            root_cert = self._tls.ca_cert or None
-            chain = self._tls.cert or None
-            private_key = self._tls.key or None
+            server_cert = get_server_certificate(self.target, self._tls.context)
 
-            creds = grpc.ssl_channel_credentials(
-                root_certificates=root_cert,
-                private_key=private_key,
-                certificate_chain=chain,
-            )
+        creds = grpc.ssl_channel_credentials(
+            root_certificates=root_cert,
+            private_key=private_key,
+            certificate_chain=chain,
+        )
 
-        # tgt = ":".join([str(x) for x in self.target])
         return grpc.secure_channel(
             self.target.address, creds, options=list(self._grpc_options.items())
         )
-
-
-    @staticmethod
-    def _build_path(path: t.Union[str, Path, pb.Path]) -> pb.Path:
-        if isinstance(path, pb.Path):
-            return path
-        if isinstance(path, Path):
-            return path.encode()
-        if isinstance(path, str) :
-            return Path.from_str(path).encode()
-        
-        raise ValueError(f"failed to build path, invlaid type {type(path)}")
-
-
-    @staticmethod
-    def _build_update(update: t.Union[tuple[str, t.Any], tuple[str, t.Any, ValueType], Update, pb.Update]) -> pb.Update:
-        if isinstance(update, pb.Update):
-            return update
-        if isinstance(update, Update):
-            return update.encode()
-        if isinstance(update, tuple):
-            if len(update) == 2:
-                path = Path.from_str(update[0])
-                value = Value(update[1], ValueType.from_val(update[1]))
-                upd = Update(path, value).encode()
-            elif len(update) == 3:
-                path = Path.from_str(update[2])
-                upd = Update(path, Value(update[1], update[2])).encode()
-            else:
-                raise ValueError(f"failed to build update, invlaid tuple length: {len(update)}")
-            return upd
-        raise ValueError(f"failed to build updates, invlaid type {type(update)}")
 
 
     def capabilities(self) -> CapabilityResponse:
@@ -190,12 +159,12 @@ class Session(object):
 
 
     def get(self, 
-            paths: list[str],
-            prefix: t.Optional[str] = None,
-            encoding: t.Union[str, Encoding] = Encoding.JSON,
-            data_type: t.Union[str, DataType] = DataType.ALL,
-            models: t.Optional[list[ModelData]] = None,
-            extensions: t.Optional[list[ext_pb.Extension]] = None,
+            paths: list[PathLike],
+            prefix: PathLike | None = None,
+            encoding: Encoding | str | int = Encoding.JSON,
+            data_type: DataType | str | int = DataType.ALL,
+            models: list[ModelData] = [],
+            extensions: list[ext_pb.Extension] = [],
         ) -> GetResponse:
         r"""Get snapshot of state from the target
 
@@ -252,11 +221,11 @@ class Session(object):
 
 
     def set(self,
-        prefix: t.Optional[str] = None,
-        deletes: t.Optional[list[str]] = None,
-        replacements: t.Optional[list[tuple[str, t.Any]]]= None,
-        updates: t.Optional[list[tuple[str, t.Any]]] = None,
-        union_replacements: t.Optional[list[tuple[str, t.Any]]] = None,
+        prefix: PathLike | None = None,
+        deletes: list[PathLike] = [],
+        replacements: UpdateList = [],
+        updates: UpdateList = [],
+        union_replacements: UpdateList = [],
     ) -> SetResponse:
         r"""Set: set, update or delete value from specified path
 
@@ -296,9 +265,9 @@ class Session(object):
 
 
     def subscribe(self, 
-        subscriptions: list[t.Union[str, Path, Subscription]],
-        prefix: t.Optional[str] = None,
-        encoding: str = "json",
+        subscriptions: list[str | Path | Subscription],
+        prefix: str | None = None,
+        encoding: Encoding | str | int = "json",
         mode: str = "stream",
         qos: int = 0,
         aggregate: bool = False,

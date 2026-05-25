@@ -218,11 +218,11 @@ def write_notification(n: Notification, pretty: bool = False) -> None:
     updates = []
     for u in n.updates:
         val = u.value
-
-        if isinstance(val.value, bytes):
-            val = val.value.decode("utf-8")
-        else:
-            val = str(val.value)
+        if val:
+            if isinstance(val.value, bytes):
+                val = val.value.decode("utf-8")
+            else:
+                val = str(val.value)
 
         updates.append({"path": str(u.path), "value": val})
 

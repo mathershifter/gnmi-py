@@ -2,6 +2,7 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 from gnmi.models import Subscription
+from gnmi.models.path import Path
 from gnmi.proto import gnmi_pb2 as pb
 
 from gnmi import models
@@ -22,10 +23,10 @@ def test_subscription_list():
     tests = [
         (
             models.SubscriptionList(
-                prefix="interfaces",
+                prefix=Path.from_str("interfaces"),
                 subscriptions=[
                     models.Subscription(
-                        path="interface[name=Ethernet1/2/3]/state/counters",
+                        path=Path.from_str("interface[name=Ethernet1/2/3]/state/counters"),
                         mode="on-change",
                         heartbeat_interval="1s",
                     ),
@@ -63,7 +64,7 @@ def test_subscription():
     tests = [
         (
             models.Subscription(
-                path="openconfig:interfaces/interface[name=Ethernet1/2/3]/state/counters",
+                path=Path.from_str("openconfig:interfaces/interface[name=Ethernet1/2/3]/state/counters"),
                 mode="on-change",
                 sample_interval="1s",
             ),

@@ -2,32 +2,21 @@
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
 
-import typing as t
 from dataclasses import dataclass, field
 
-# from gnmi.models.descriptor import ListDescriptor
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.model import BaseModel
-from gnmi.models.path import Path, path_factory
-from gnmi.models.update import Update, update_list_factory
+from gnmi.models.path import Path, Paths, PathDescriptor, path_factory
+from gnmi.models.update import Update, Updates
 
 
 @dataclass
 class Notification(BaseModel[pb.Notification]):
     timestamp: int
-    prefix: t.Optional[t.Union[str, Path]] = "" #PathDescriptor = PathDescriptor(default="")
-    deletes: list[t.Union[Path, pb.Path, str]] = field(default_factory=list)
-    updates: list[t.Union[Update, pb.Update, tuple]] = field(default_factory=list)
+    prefix: PathDescriptor = PathDescriptor(default="")
+    deletes: Paths = field(default=Paths())
+    updates: Updates = field(default=Updates())
     atomic: bool = False
-
-    @staticmethod
-    def prefix_factory(path: t.Union[pb.Path, Path, str]) -> Path:
-        return path_factory(path)
-
-    @staticmethod
-    def updates_factory(u) -> list[Update]:
-        ul = update_list_factory(u)
-        return ul
 
     @staticmethod
     def deletes_factory(d) -> list[Path]:
@@ -38,20 +27,22 @@ class Notification(BaseModel[pb.Notification]):
 
     @classmethod
     def decode(cls, n: pb.Notification) -> "Notification":
+
         return cls(
             timestamp=n.timestamp,
-            prefix=n.prefix,
-            updates=list(n.update),
-            deletes=list(n.delete),
+            prefix=Path.decode(n.prefix),
+            updates=[Update.decode(u) for u in n.update],
+            deletes=[Path.decode(d) for d in n.delete],
         )
 
     def encode(self) -> pb.Notification:
-        pfx: t.Optional[Path] = None
+        pfx: pb.Path | None = None
         upds = []
         dlts = []
 
         if self.prefix is not None and not self.prefix.is_empty():
-            pfx = self.prefix.encode()
+            if self.prefix is not None:
+                pfx = self.prefix.encode()
 
         if self.updates is not None:
             upds = [u.encode() for u in self.updates]

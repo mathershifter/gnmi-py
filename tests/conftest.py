@@ -24,8 +24,8 @@ def tlsconfig() -> TLSConfig:
 
     return TLSConfig(
         ca_cert=root_cert,
-        cert=client_cert,
-        key=client_key,
+        client_cert=client_cert,
+        client_key=client_key,
     )
 
 @pytest.fixture(scope="module")

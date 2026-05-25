@@ -25,8 +25,8 @@ def main():
     if cnf.tls:
         tls_config = TLSConfig(
             ca_cert=cnf.tls.ca_cert,
-            cert=cnf.tls.cert,
-            key=cnf.tls.key,
+            client_cert=cnf.tls.cert,
+            client_key=cnf.tls.key,
             get_server_cert=cnf.tls.get_server_certificates
         )
     sess = Session(
@@ -50,8 +50,6 @@ def main():
             print(f"    Organization: {model.organization}")
 
     elif cnf.get:
-        # options: GetOptions = cnf.get.options
-        # paths = config.Get.paths
         rsp = sess.get(
             paths=cnf.get.paths,
             prefix=cnf.get.prefix,

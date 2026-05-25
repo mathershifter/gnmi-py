@@ -43,17 +43,6 @@ class Target(BaseModel[pb.Target]):
     address: str
     metadata: dict[str, str] = field(default_factory=dict)
 
-    # @staticmethod
-    # def address_factory(addr: t.Union[str, Address]) -> Address:
-    #
-    #     if isinstance(addr, Address):
-    #         return addr
-    #
-    #     if isinstance(addr, str):
-    #         return Address.from_str(addr)
-    #
-    #     raise TypeError(f"Address type {type(addr)} not supported")
-
     def __str__(self) -> str:
         return str(self.address)
 
@@ -70,40 +59,54 @@ class Target(BaseModel[pb.Target]):
             metadata=dict(tgt.meta),
         )
 
-# def split_addr_port(addr: str) -> t.Tuple[str, int]:
-#     host = ""
-#     port = 0
-#
-#     buf = ""
-#
-#     in_host = True
-#     in_v6_host = False
-#
-#     for c in addr:
-#
-#         if c == '[':
-#             in_v6_host = True
-#             continue
-#
-#         if c == ']':
-#             in_v6_host = False
-#             continue
-#
-#         if c == ":" and not in_v6_host:
-#             in_host = False
-#             host = buf
-#             buf = ""
-#             continue
-#
-#         buf += c
-#
-#     if len(buf) > 0:
-#         if in_host:
-#             host = buf
-#             port = 0
-#         else:
-#             port = int(buf)
-#
-#     return host, int(port)
+    @property
+    def hostaddr_port(self) -> tuple[str, int]:
+        return split_addr_port(self.address)
+    
+    @property
+    def port(self) -> int:
+        _, p = self.hostaddr_port
+        return p
+
+    @property
+    def hostaddr(self) -> str:
+        h, _ = self.hostaddr_port
+        return h
+
+def split_addr_port(addr: str) -> tuple[str, int]:
+    host = ""
+    port = 0
+
+    buf = ""
+
+    in_host = True
+    in_v6_host = False
+
+    for c in addr:
+
+        if c == '[':
+            in_v6_host = True
+            continue
+
+        if c == ']':
+            in_v6_host = False
+            continue
+
+        if c == ":" and not in_v6_host:
+            in_host = False
+            host = buf
+            buf = ""
+            continue
+
+        buf += c
+
+    if len(buf) > 0:
+        if in_host:
+            host = buf
+            port = 0
+        else:
+            port = int(buf)
+
+    return host, int(port)
 
 

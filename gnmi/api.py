@@ -7,6 +7,8 @@ import typing as t
 from gnmi.session import Session, TLSConfig, BasicAuth
 
 from gnmi.models import Notification, SetResponse, Subscription
+from gnmi.models.path import PathLike
+from gnmi.models.update import UpdateList
 
 __all__ = ["capabilites", "delete", "get", "replace", "subscribe", "update"]
 
@@ -111,6 +113,7 @@ def get(
 
     """
     sess = _new_session(target, auth, insecure, tls, override)
+    
     rsp = sess.get(
             paths,
             prefix=prefix,
@@ -218,8 +221,8 @@ def subscribe(
 
 def delete(
     target: str,
-    paths: list[str],
-    prefix: t.Optional[str] = None,
+    paths: list[PathLike],
+    prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
     tls: t.Optional[TLSConfig] = None,
@@ -256,7 +259,7 @@ def delete(
 
 def replace(
     target: str,
-    replacements: list[tuple[str, t.Any]],
+    replacements: UpdateList,
     prefix: t.Optional[str] = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
@@ -295,8 +298,8 @@ def replace(
 
 def update(
     target: str,
-    updates: list[tuple[str, t.Any]],
-    prefix: t.Optional[str] = None,
+    updates: UpdateList,
+    prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
     tls: t.Optional[TLSConfig] = None,

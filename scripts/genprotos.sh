@@ -12,11 +12,11 @@ WORKDIR=$(mktemp -d)
 trap 'test -d "$WORKDIR" && rm -rf "$WORKDIR"' EXIT
 
 # Downloading protos
-wget https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto -O "$WORKDIR/gnmi.proto"
-wget https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto -O "$WORKDIR/gnmi_ext.proto"
-wget https://raw.githubusercontent.com/grpc/grpc/master/src/proto/grpc/status/status.proto -O "$WORKDIR/status.proto"
-wget https://raw.githubusercontent.com/openconfig/gnmi/master/proto/target/target.proto -O "$WORKDIR/target.proto"
-
+curl -fsSL https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto -o "$WORKDIR/gnmi.proto"
+curl -fsSL https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto -o "$WORKDIR/gnmi_ext.proto"
+curl -fsSL https://raw.githubusercontent.com/grpc/grpc/master/src/proto/grpc/status/status.proto -o "$WORKDIR/status.proto"
+curl -fsSL https://raw.githubusercontent.com/openconfig/gnmi/master/proto/target/target.proto -o "$WORKDIR/target.proto"
+# curl -fsSL https://raw.githubusercontent.com/protocolbuffers/protobuf/refs/heads/main/src/google/protobuf/any.proto -o "$WORKDIR/any.proto"
 echo "Fixing proto imports..."
 case $OSTYPE in
   "darwin"*)
@@ -38,6 +38,7 @@ python3 -m grpc_tools.protoc \
   --grpc_python_out="$WORKDIR" \
   --pyi_out="$WORKDIR" \
   "$WORKDIR/gnmi.proto" "$WORKDIR/gnmi_ext.proto" "$WORKDIR/status.proto" "$WORKDIR/target.proto"
+  # "$WORKDIR/any.proto"
   # --mypy_out="$WORKDIR" \
 
 echo "Fixing python imports..."

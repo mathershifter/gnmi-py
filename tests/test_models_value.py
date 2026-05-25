@@ -3,6 +3,9 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 
 from decimal import Decimal
+
+import pytest
+
 from google.protobuf.any_pb2 import Any
 
 from gnmi.proto import gnmi_pb2 as pb
@@ -10,31 +13,29 @@ from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.value import ValueType, Value, Decimal64
 
 def test_decimal():
-    tests = [
-        (
-            Decimal("3.14159265359"),
-            pb.Decimal64(digits=314159265359, precision=11),
-        ),
-        (
-            3.14159265359,
-            pb.Decimal64(digits=314159265359, precision=11),
-        ),
-        (
-            "3.14159265359",
-            pb.Decimal64(digits=314159265359, precision=11),
-        ),
-        (
-            (0, (3,1,4,1,5,9,2,6,5,3,5,9), -11),
-            pb.Decimal64(digits=314159265359, precision=11),
-        )
-    ]
+    with pytest.warns(DeprecationWarning):
+        tests = [
+            (
+                Decimal("3.14159265359"),
+                pb.Decimal64(digits=314159265359, precision=11),
+            ),
+            # (
+            #     Decimal(3.14159265359),
+            #     pb.Decimal64(digits=314159265359, precision=11),
+            # ),
+            (
+                Decimal((0, (3,1,4,1,5,9,2,6,5,3,5,9), -11)),
+                pb.Decimal64(digits=314159265359, precision=11),
+            )
+        ]
 
-    for test in tests:
-        have, want = test
-        d = Decimal64(have)
-        assert d.precision == want.precision
-        assert d.digits == want.digits
-        assert d.encode() == want
+    
+        for test in tests:
+            have, want = test
+            d = Decimal64(have)
+            assert d.precision == want.precision
+            assert d.digits == want.digits
+            assert d.encode() == want
 
 def test_val():
     tests = [
@@ -53,10 +54,6 @@ def test_val():
         (
             (b"some_bytes", ValueType.BYTES_VAL),
             pb.TypedValue(bytes_val=b"some_bytes"),
-        ),
-        (
-            (Decimal64(3.14159265359), ValueType.DECIMAL_VAL),
-            pb.TypedValue(decimal_val=pb.Decimal64(digits=314159265359, precision=11)),
         ),
         (
             (b"some_proto_bytes", ValueType.PROTO_BYTES),

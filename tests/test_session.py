@@ -1,12 +1,16 @@
 import os
+
 import pytest
+
 from tests.conftest import GNMI_PASS, GNMI_TARGET, GNMI_INSECURE, GNMI_USER
+
 from gnmi.session import Session
 from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
 from gnmi.models import Update, Path
 
 GNMI_PATHS = os.environ.get("GNMI_PATHS", "/system/config;/system/memory/state")
 
+pytestmark = pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 
 @pytest.fixture()
 def paths():
@@ -23,12 +27,10 @@ def session(target, tlsconfig):
         target, insecure=insecure, tls=tlsconfig, metadata=metadata
     )
 
-@pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 def test_cap(session):
     resp = session.capabilities()
     assert len(resp.supported_encodings)
 
-@pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 def test_get(session, paths):
     resp = session.get(paths)
     for notif in resp.notifications:
@@ -38,7 +40,6 @@ def test_get(session, paths):
             assert type(update.path) is Path
             assert hasattr(update, "value")
 
-@pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 def test_sub(session, paths):
     with pytest.raises(GrpcDeadlineExceeded):
         for resp in session.subscribe(paths, timeout=2):
@@ -47,13 +48,11 @@ def test_sub(session, paths):
             for resp.update in resp.update.updates:
                 pass
 
-@pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 def test_sub_sync_response(session, paths):
     for resp in session.subscribe(paths):
         if resp.sync_response:
             break
 
-@pytest.mark.skipif(not GNMI_TARGET, reason="gNMI target not set")
 def test_set(session):
     path = "/system/config/hostname"
 
