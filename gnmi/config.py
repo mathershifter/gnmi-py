@@ -7,6 +7,20 @@ from typing import Any
 
 from pydantic import BaseModel, field_validator
 
+TOML_AVAILABLE = False
+YAML_AVAILABLE = False
+try:
+    import toml
+    TOML_AVAILABLE = True
+except ImportError:
+    pass
+
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    pass
+
 from gnmi import util
 from gnmi.models.path import PathLike
 
@@ -126,19 +140,32 @@ class Config(BaseModel):
 
 def load_config_file(path: str) -> Config:
     def _loader() -> dict[str, Any]:
-        print(f"Loading config from {path}")
-        if path.endswith(".toml"):
-            import toml
-            with open(path, "r") as f:
+        
+        try:
+            if TOML_AVAILABLE and path.endswith(".toml") or path in (".gnmirc", "_gnmirc"):
+                with open(path, "r") as f:
+                    return toml.load(f) # type: ignore[possibly-unbound-variable]
+            elif YAML_AVAILABLE and (path.endswith(".yaml") or path.endswith(".yml")):
+                with open(path, "r") as f:
+                    c = yaml.safe_load(f.read()) # type: ignore[possibly-unbound-variable]
+                    return c
+            else:
+                raise ValueError(f"Unsupported config file format: {path}")
+        except Exception as e:
+            print(f"Error loading config file: {e}")
+            sys.exit(1)
+        # if path.endswith(".toml"):
+            
+        #     with open(path, "r") as f:
 
-                return toml.load(f)
-        elif path.endswith(".yaml") or path.endswith(".yml"):
-            import yaml
-            with open(path, "r") as f:
-                c = yaml.safe_load(f.read())
-                print(f"Loaded config: {c}")
+        #         return toml.load(f)
+        # elif path.endswith(".yaml") or path.endswith(".yml"):
+        #     import yaml
+        #     with open(path, "r") as f:
+        #         c = yaml.safe_load(f.read())
+        #         print(f"Loaded config: {c}")
                 
-                return c
-        else:
-            raise ValueError(f"Unsupported config file format: {path}")
+        #         return c
+        # else:
+        #     raise ValueError(f"Unsupported config file format: {path}")
     return Config(**_loader())

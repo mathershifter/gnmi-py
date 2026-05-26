@@ -6,38 +6,6 @@ from dataclasses import dataclass, field
 from gnmi.models.model import BaseModel
 from gnmi.proto import target_pb2 as pb
 
-IANA_GNMI_PORT = 50051
-
-# @dataclass
-# class Address:
-#     host: str
-#     port: int = IANA_GNMI_PORT
-#
-#     @classmethod
-#     def from_str(cls, addr: str) -> "Address":
-#         host = "localhost"
-#         port = IANA_GNMI_PORT
-#
-#         host_, port_ = split_addr_port(addr)
-#         if host_:
-#             host = host_
-#
-#         if port_ > 0:
-#             port = port_
-#
-#         return cls(host, port)
-#
-#     @property
-#     def host_port(self) -> tuple[str, int]:
-#         return self.host, self.port
-#
-#     def __str__(self) -> str:
-#         host = self.host
-#         if ":" in host:
-#             host = f"[{host}]"
-#
-#         return f"{host}:{self.port}"
-
 @dataclass
 class Target(BaseModel[pb.Target]):
     address: str

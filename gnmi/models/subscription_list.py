@@ -51,6 +51,8 @@ class Subscriptions:
         for s in value:
             if isinstance(s, Subscription):
                 subs.append(s)
+            elif isinstance(s, pb.Subscription):
+                subs.append(Subscription.decode(s))
             elif isinstance(s, Path):
                 subs.append(Subscription(path=s))
             elif isinstance(s, (str, bytes)):

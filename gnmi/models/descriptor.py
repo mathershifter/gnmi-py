@@ -54,20 +54,3 @@ class Enum(Generic[E]):
             setattr(obj, self._name, cls(value))
         else:
             raise TypeError(f"'{value}' is not a valid enum value")
-
-
-# class ListDescriptor(TypedDescriptor[T]):
-#     def __init__(self, *, factory: type[list[str], list[T]]):
-#         self._factory = factory
-#
-#     def __set_name__(self, owner, name):
-#         self._name = "_" + name
-#
-#     def __get__(self, obj, typ) -> t.Callable[[], list[T]]:
-#         if obj is None:
-#             return list[T]
-#
-#         return getattr(obj, self._name, self._factory)
-#
-#     def __set__(self, obj, value: list):
-#         setattr(obj, self._name, self._factory(value))

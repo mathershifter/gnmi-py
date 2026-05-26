@@ -126,3 +126,76 @@ def test_api_delete_replace_update(stub_target, stub_server):
     assert stub_server.servicer.last_set_request.replace
     api.update(stub_target, [("/c", "v")], insecure=True)
     assert stub_server.servicer.last_set_request.update
+
+
+# ---------------------------------------------------------------------------
+# TLS branch in Session._new_channel (AUDIT.md Testing #9)
+# ---------------------------------------------------------------------------
+
+def test_session_tls_branch_builds_secure_channel():
+    """Without `insecure=True` and with a TLSConfig, Session must build a
+    secure gRPC channel using the user's CA + client cert/key."""
+    from unittest import mock
+
+    from gnmi import session as session_mod
+    from gnmi.session import Session, TLSConfig
+
+    tls = TLSConfig(ca_cert=b"ca", client_cert=b"crt", client_key=b"key")
+
+    captured: dict = {}
+
+    def fake_creds(root_certificates, private_key, certificate_chain):
+        captured["root"] = root_certificates
+        captured["key"] = private_key
+        captured["chain"] = certificate_chain
+        return mock.sentinel.creds
+
+    def fake_secure_channel(target, creds, options):
+        captured["target"] = target
+        captured["creds"] = creds
+        return mock.MagicMock()
+
+    with mock.patch.object(
+        session_mod.grpc, "ssl_channel_credentials", side_effect=fake_creds
+    ), mock.patch.object(
+        session_mod.grpc, "secure_channel", side_effect=fake_secure_channel
+    ):
+        Session("r1.lab:6030", tls=tls)
+
+    assert captured["root"] == b"ca"
+    assert captured["chain"] == b"crt"
+    assert captured["key"] == b"key"
+    assert captured["target"] == "r1.lab:6030"
+    assert captured["creds"] is mock.sentinel.creds
+
+
+def test_session_requires_tls_or_insecure():
+    """Neither flag set: must raise rather than silently make an insecure
+    channel."""
+    from gnmi.session import Session
+
+    with pytest.raises(ValueError):
+        Session("r1.lab:6030")
+
+
+# ---------------------------------------------------------------------------
+# Stream-side error: server returns OK chunks then raises (AUDIT.md #6)
+# ---------------------------------------------------------------------------
+
+def test_session_subscribe_translates_stream_error(session, stub_server):
+    """A non-OK status mid-stream must raise GrpcError on the next yield,
+    not silently terminate."""
+
+    def boom(request_iterator, context):
+        # Consume the request, then fail with PERMISSION_DENIED.
+        for _ in request_iterator:
+            break
+        context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+        context.set_details("nope")
+        return
+        yield  # pragma: no cover - keep generator type
+
+    stub_server.servicer.subscribe_handler = boom
+
+    with pytest.raises(GrpcError):
+        list(session.subscribe(["/a"], mode="once"))

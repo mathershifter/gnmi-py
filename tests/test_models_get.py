@@ -102,4 +102,16 @@ def test_get_response():
         want, have = test
 
         assert want.encode() == have
-        # assert GetResponse.decode(have) == want
+        decoded = GetResponse.decode(have)
+        assert len(decoded.notifications) == len(want.notifications)
+        for got_n, want_n in zip(decoded.notifications, want.notifications):
+            assert got_n.timestamp == want_n.timestamp
+            assert len(got_n.updates) == len(want_n.updates)
+
+
+def test_get_request_data_type_round_trip():
+    # Each DataType variant must survive encode → decode.
+    for dt in DataType:
+        req = GetRequest(paths=["/a"], type=dt)
+        decoded = GetRequest.decode(req.encode())
+        assert decoded.type == dt

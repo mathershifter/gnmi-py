@@ -52,9 +52,19 @@ class SubscribeRequest(BaseModel[pb.SubscribeRequest]):
 
     @classmethod
     def decode(cls, v: pb.SubscribeRequest) -> 'SubscribeRequest':
+        if v.HasField("subscribe"):  # protobuf returns default-constructed sub-messages for unset oneof fields, so check presence first
+            subscribe = SubscriptionList.decode(v.subscribe)
+        else:
+            subscribe = None
+
+        if v.HasField("poll"):
+            poll = Poll.decode(v.poll)
+        else:
+            poll = None
+
         return cls(
-            subscribe=v.subscribe and SubscriptionList.decode(v.subscribe),
-            poll=v.poll and Poll.decode(v.poll),
+            subscribe=subscribe,
+            poll=poll,
             extension=list(v.extension)
         )
 

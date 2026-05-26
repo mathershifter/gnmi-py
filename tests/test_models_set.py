@@ -3,7 +3,8 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 from gnmi.proto import gnmi_pb2 as pb
 
-from gnmi.models.set import SetRequest
+from gnmi.models.set import SetRequest, SetResponse
+from gnmi.models.update_result import UpdateResult, Operation
 
 
 def test_model_set_request():
@@ -38,17 +39,25 @@ def test_model_set_request():
         assert want.encode() == have
         assert SetRequest.decode(have) == want
 
-# def test_model_set_response():
-#     tests = [
-#         (
-#             SetResponse(),
-#             pb.SetResponse(
-#
-#             ),
-#         )
-#     ]
-#
-#     for test in tests:
-#         l, r = test
-#         assert l.encode() == r
-#         assert SetResponse.decode(r) == l
+def test_model_set_response_round_trip():
+    resp = SetResponse(
+        prefix="/system",
+        responses=[
+            UpdateResult(path="/config/hostname", op=Operation.UPDATE),
+            UpdateResult(path="/state/stale", op=Operation.DELETE),
+        ],
+        timestamp=99,
+    )
+    encoded = resp.encode()
+    assert encoded.timestamp == 99
+    assert len(encoded.response) == 2
+
+    decoded = SetResponse.decode(encoded)
+    assert decoded.timestamp == 99
+    assert [r.op.name for r in decoded.responses] == ["UPDATE", "DELETE"]
+
+
+def test_model_set_response_decode_empty():
+    decoded = SetResponse.decode(pb.SetResponse())
+    assert decoded.responses == []
+    assert decoded.message is None
