@@ -185,18 +185,12 @@ def test_load_rc_returns_empty_config_when_no_rc_file(monkeypatch, tmp_path):
     assert cnf.target in ("", None) or cnf.target == "localhost:50051"
 
 
-# def test_load_rc_with_existing_rc_file_raises_on_unsupported_extension(
-#     monkeypatch, tmp_path
-# ):
-#     # The rc filenames (`.gnmirc`, `_gnmirc`) are listed in
-#     # gnmi.constants.GNMIRC_FILES, but `load_config_file` only accepts
-#     # `.toml`/`.yaml`/`.yml`, so any rc file that actually exists fails
-#     # immediately. This regression test pins down that surprising
-#     # behavior so a future fix can flip it to a real success path.
-#     rc = tmp_path / ".gnmirc"
-#     rc.write_text("target: r1.lab:6030\n")
-#     monkeypatch.setattr(cli, "GNMIRC_PATH", str(tmp_path))
-#     with pytest.raises(ValueError, match="Unsupported config file format"):
-#         load_rc()
+def test_load_rc_reads_existing_rc_file(monkeypatch, tmp_path):
+    # `.gnmirc` is treated as TOML by load_config_file.
+    (tmp_path / ".gnmirc").write_text('target = "r1.lab:6030"\ninsecure = true\n')
+    monkeypatch.setattr(cli, "GNMIRC_PATH", str(tmp_path))
+    cnf = load_rc()
+    assert cnf.target == "r1.lab:6030"
+    assert cnf.insecure is True
 
 

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-import sys
+import os
 
 from typing import Any
 
 from pydantic import BaseModel, field_validator
+
+from gnmi.constants import GNMIRC_FILES
 
 TOML_AVAILABLE = False
 YAML_AVAILABLE = False
@@ -139,33 +141,27 @@ class Config(BaseModel):
 
 
 def load_config_file(path: str) -> Config:
-    def _loader() -> dict[str, Any]:
-        
-        try:
-            if TOML_AVAILABLE and path.endswith(".toml") or path in (".gnmirc", "_gnmirc"):
-                with open(path, "r") as f:
-                    return toml.load(f) # type: ignore[possibly-unbound-variable]
-            elif YAML_AVAILABLE and (path.endswith(".yaml") or path.endswith(".yml")):
-                with open(path, "r") as f:
-                    c = yaml.safe_load(f.read()) # type: ignore[possibly-unbound-variable]
-                    return c
-            else:
-                raise ValueError(f"Unsupported config file format: {path}")
-        except Exception as e:
-            print(f"Error loading config file: {e}")
-            sys.exit(1)
-        # if path.endswith(".toml"):
-            
-        #     with open(path, "r") as f:
+    # `.gnmirc` / `_gnmirc` are treated as TOML regardless of extension.
+    name = os.path.basename(path)
+    is_rc = name in GNMIRC_FILES
+    is_toml = is_rc or path.endswith(".toml")
+    is_yaml = path.endswith((".yaml", ".yml"))
 
-        #         return toml.load(f)
-        # elif path.endswith(".yaml") or path.endswith(".yml"):
-        #     import yaml
-        #     with open(path, "r") as f:
-        #         c = yaml.safe_load(f.read())
-        #         print(f"Loaded config: {c}")
-                
-        #         return c
-        # else:
-        #     raise ValueError(f"Unsupported config file format: {path}")
-    return Config(**_loader())
+    if is_toml:
+        if not TOML_AVAILABLE:
+            raise RuntimeError(
+                f"Cannot load {path}: TOML support requires the `toml` package."
+            )
+        with open(path, "r") as f:
+            data = toml.load(f)  # type: ignore[possibly-unbound-variable]
+    elif is_yaml:
+        if not YAML_AVAILABLE:
+            raise RuntimeError(
+                f"Cannot load {path}: YAML support requires the `pyyaml` package."
+            )
+        with open(path, "r") as f:
+            data = yaml.safe_load(f.read())  # type: ignore[possibly-unbound-variable]
+    else:
+        raise ValueError(f"Unsupported config file format: {path}")
+
+    return Config(**data)
