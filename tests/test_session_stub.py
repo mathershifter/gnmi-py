@@ -14,7 +14,6 @@ import grpc
 import pytest
 
 from gnmi import api
-from gnmi.exceptions import GrpcError
 from gnmi.models import Update
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.session import Session
@@ -54,15 +53,16 @@ def test_session_get_echoes_paths(session, stub_server):
     assert len(stub_server.servicer.last_get_request.path) == 1
 
 
-def test_session_get_translates_rpc_error(session, stub_server):
+def test_session_get_propagates_rpc_error(session, stub_server):
     def boom(request, context):
         context.set_code(grpc.StatusCode.PERMISSION_DENIED)
         context.set_details("not allowed")
         return pb.GetResponse()
 
     stub_server.servicer.get_handler = boom
-    with pytest.raises(GrpcError):
+    with pytest.raises(grpc.RpcError) as ei:
         session.get(["/x"])
+    assert ei.value.code() == grpc.StatusCode.PERMISSION_DENIED
 
 
 def test_session_set_round_trips_all_ops(session, stub_server):
@@ -182,9 +182,9 @@ def test_session_requires_tls_or_insecure():
 # Stream-side error: server returns OK chunks then raises (AUDIT.md #6)
 # ---------------------------------------------------------------------------
 
-def test_session_subscribe_translates_stream_error(session, stub_server):
-    """A non-OK status mid-stream must raise GrpcError on the next yield,
-    not silently terminate."""
+def test_session_subscribe_propagates_stream_error(session, stub_server):
+    """A non-OK status mid-stream must surface as grpc.RpcError on the
+    next yield, not silently terminate."""
 
     def boom(request_iterator, context):
         # Consume the request, then fail with PERMISSION_DENIED.
@@ -197,5 +197,6 @@ def test_session_subscribe_translates_stream_error(session, stub_server):
 
     stub_server.servicer.subscribe_handler = boom
 
-    with pytest.raises(GrpcError):
+    with pytest.raises(grpc.RpcError) as ei:
         list(session.subscribe(["/a"], mode="once"))
+    assert ei.value.code() == grpc.StatusCode.PERMISSION_DENIED

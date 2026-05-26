@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-from typing import Iterable
-from contextlib import contextmanager
-from gnmi.exceptions import GrpcDeadlineExceeded
+from typing import Iterable, AsyncIterable
 
-from gnmi.session import Session, TLSConfig, BasicAuth
-
+from gnmi.tls import TLSConfig
+from gnmi.session import Session, BasicAuth
+from gnmi.async_session import AsyncSession
 from gnmi.models import Notification, SetResponse, Subscription
 from gnmi.models.path import PathLike
 from gnmi.models.update import UpdateList
@@ -62,6 +61,35 @@ def capabilities(
     with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
         return sess.capabilities()
 
+async def acapabilities(
+    target: str,
+    auth: BasicAuth = ("", ""),
+    insecure: bool = False,
+    tls: TLSConfig | None = None,
+    override: str = "",
+):
+    """
+    Async get supported models and encodings from target
+
+    Usage::
+
+        >>> import asyncio
+        >>> asyncio.run(acapabilities("veos1:6030", auth=("admin", "p4ssw0rd")))
+
+    :param target: gNMI target
+    :type target: str
+    :param auth: username and password
+    :type auth: tuple
+    :param tls: SSL certificates
+    :type tls: gnmi.session.TLSConfig
+    :param insecure: disable TLS
+    :type insecure: bool
+    :param override: override hostname
+    :type override: str
+    """
+
+    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return await sess.capabilities()  
 
 def get(
     target: str,
@@ -117,6 +145,40 @@ def get(
         for notif in rsp.notifications:
             yield notif
 
+async def aget(
+    target: str,
+    paths: list,
+    prefix: PathLike | None = None,
+    encoding: str = "json",
+    data_type: str = "all",
+    auth: BasicAuth = ("", ""),
+    insecure: bool = False,
+    tls: TLSConfig | None = None,
+    override: str = ""
+) -> AsyncIterable[Notification]:
+    """
+    Async get path(s) from target
+
+    Usage::
+
+        >>> import asyncio
+        >>> responses = asyncio.run(aget("veos1:6030", ["/system/config"],
+        ...     auth=("admin", "p4ssw0rd")))
+        >>> for n in responses:
+        ...     for upd in n.updates:
+        ...         print(upd.path, upd.val)
+        ...     for path in n.deletes:
+        ...         print(str(path))
+    """
+    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        rsp = await sess.get(
+            paths,
+            prefix=prefix,
+            encoding=encoding,
+            data_type=data_type)
+
+        for notif in rsp.notifications:
+            yield notif
 
 def subscribe(
     target: str,
@@ -210,6 +272,58 @@ def subscribe(
                 continue
             yield resp.update
 
+async def asubscribe(
+    target: str,
+    paths: list,
+    auth: BasicAuth = ("", ""),
+    prefix: PathLike | None = None,
+    encoding: str = "json",
+    mode: str = "stream",
+    submode: str = "target_defined",
+    aggregate: bool = False,
+    suppress: bool = False,
+    timeout: int = 0,
+    interval: int = 0,
+    heartbeat: int = 0,
+    insecure: bool = False,
+    tls: TLSConfig | None = None,
+    qos: int = 0,
+    override: str = "",
+) -> AsyncIterable[Notification]:
+    """
+    Async subscribe to updates from target
+    Usage::
+        >>> import asyncio
+        >>> responses = asyncio.run(asubscribe("veos1:6030", ["/system/processes/process"],
+        ...     auth=("admin", "p4ssw0rd")))
+        ...
+        >>> for n in responses:
+        ...     for upd in n.updates:
+        ...         print(upd.path, upd.val)
+        ...     for path in n.deletes:
+        ...         print(str(path))
+    """
+    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        subs = []
+        for p in paths:
+            subs.append(Subscription(
+                path=p,
+                mode=submode,
+            sample_interval=interval,
+            heartbeat_interval=heartbeat,
+            suppress_redundant=suppress,
+        ))
+    
+        async for resp in sess.subscribe(subs,
+                                prefix=prefix,
+                                encoding=encoding,
+                                mode=mode,
+                                qos=qos,
+                                aggregate=aggregate,
+                                timeout=timeout):
+            if resp.sync_response:
+                continue
+            yield resp.update
 
 def delete(
     target: str,
@@ -247,6 +361,42 @@ def delete(
     with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
         return sess.set(deletes=paths, prefix=prefix)
 
+async def adelete(
+    target: str,
+    paths: list[PathLike],
+    prefix: PathLike | None = None,
+    auth: BasicAuth = ("", ""),
+    insecure: bool = False,
+    tls: TLSConfig | None = None,
+    override: str = "",
+) -> SetResponse:
+    """
+    Async delete paths from the target
+
+    Usage::
+
+        >>> import asyncio
+        >>> asyncio.run(adelete("veos1:6030", ["/some/deletable/path"],
+        ...     auth=("admin", "p4ssw0rd")))
+
+    :param target: gNMI target
+    :type target: str
+    :param paths: Path strings
+    :type paths: list[str]
+    :param prefix: Prefix path
+    :type prefix: PathLike
+    :param auth: username and password
+    :type auth: tuple
+    :param tls: SSL certificates
+    :type tls: gnmi.session.TLSConfig
+    :param insecure: insecure
+    :type insecure: bool
+    :param override: override hostname
+    :type override: str
+    """
+
+    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return await sess.set(deletes=paths, prefix=prefix)
 
 def replace(
     target: str,
@@ -285,7 +435,28 @@ def replace(
     with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
         return sess.set(replacements=replacements, prefix=prefix)
 
+async def areplace(
+    target: str,
+    replacements: UpdateList,
+    prefix: PathLike | None = None,
+    auth: BasicAuth = ("", ""),
+    insecure: bool = False,
+    tls: TLSConfig | None = None,
+    override: str = "",
+) -> SetResponse:
+    """
+    Async replace paths on the target
 
+    Usage::
+        >>> import asyncio
+        >>> asyncio.run(areplace(
+        ...     "veos1:6030",
+        ...     [("/system/config/hostname", "newhostname")],
+        ...     auth=("admin", "p4ssw0rd")
+        ... ))
+    """
+    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return await sess.set(replacements=replacements, prefix=prefix)
 
 def update(
     target: str,
@@ -322,3 +493,40 @@ def update(
     """
     with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
         return sess.set(updates=updates, prefix=prefix)
+
+async def aupdate(
+    target: str,
+    updates: UpdateList,
+    prefix: PathLike | None = None,
+    auth: BasicAuth = ("", ""),
+    insecure: bool = False,
+    tls: TLSConfig | None = None,
+    override: str = "",
+) -> SetResponse:
+    """
+    Async update paths on the target
+
+    Usage::
+
+        >>> import asyncio
+        >>> asyncio.run(aupdate("veos1:6030",
+        ...     [("/system/config/hostname", "newhostname")],
+        ...     auth=("admin", "p4ssw0rd")))
+
+    :param target: gNMI target
+    :type target: str
+    :param updates: update path, value
+    :type updates: list[tuple]
+    :param prefix: Prefix path
+    :type prefix: PathLike
+    :param auth: username and password
+    :type auth: tuple
+    :param tls: SSL certificates
+    :type tls: gnmi.session.TLSConfig
+    :param insecure: insecure
+    :type insecure: bool
+    :param override: override hostname
+    :type override: str
+    """
+    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+        return await sess.set(updates=updates, prefix=prefix)

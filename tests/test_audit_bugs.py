@@ -141,23 +141,27 @@ def test_subscribe_request_round_trip_preserves_poll():
 #     "stream end from a timeout.",
 # )
 def test_subscribe_propagates_deadline_exceeded():
+    import grpc
+
     from gnmi import api
-    from gnmi.exceptions import GrpcDeadlineExceeded
+
+    class _FakeDeadline(grpc.RpcError):
+        def code(self):
+            return grpc.StatusCode.DEADLINE_EXCEEDED
 
     def _subscribe(*_a, **_kw):
-        raise GrpcDeadlineExceeded(mock.MagicMock(code=mock.MagicMock(name="DEADLINE_EXCEEDED")))
+        raise _FakeDeadline()
         yield  # pragma: no cover - keeps it a generator
 
     sess = mock.MagicMock()
     sess.subscribe.side_effect = _subscribe
-    sess.subscribe.side_effect = _subscribe
-    
+
     cm = mock.MagicMock()
     cm.__enter__.return_value = sess
     cm.__exit__.return_value = False
     with mock.patch.object(api, "Session", return_value=cm):
         gen = api.subscribe("localhost:6030", ["/a"])
-        with pytest.raises(GrpcDeadlineExceeded):
+        with pytest.raises(grpc.RpcError):
             list(gen)
 
 

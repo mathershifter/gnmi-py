@@ -9,7 +9,7 @@ from tests.conftest import (
 )
 
 from gnmi.session import Session
-from gnmi.exceptions import GrpcError, GrpcDeadlineExceeded
+import grpc
 from gnmi.models import Update, Path
 
 GNMI_PATHS = os.environ.get("GNMI_PATHS", "/system/config;/system/memory/state")
@@ -41,12 +41,13 @@ def test_get(session, paths):
 
 @requires_live_target
 def test_sub(session, paths):
-    with pytest.raises(GrpcDeadlineExceeded):
+    with pytest.raises(grpc.RpcError) as ei:
         for resp in session.subscribe(paths, timeout=2):
             if resp.sync_response:
                 continue
             for resp.update in resp.update.updates:
                 pass
+    assert ei.value.code() == grpc.StatusCode.DEADLINE_EXCEEDED
 
 def test_sub_sync_response(session, paths):
     for resp in session.subscribe(paths, mode="once"):
@@ -66,7 +67,7 @@ def test_set(session):
         ("/system/config/hostname", 1.1),
     ]
 
-    with pytest.raises(GrpcError):
+    with pytest.raises(grpc.RpcError):
         rsps = session.set(replacements=invalid)
         assert rsps.responses[0].op.name == "INVALID"
 

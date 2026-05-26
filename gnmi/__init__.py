@@ -12,11 +12,14 @@ if sys.version_info < (3, 10):
     raise ValueError("Python 3.10+ is required")
 
 
-from gnmi.session import Session, TLSConfig, BasicAuth
+from gnmi.session import Session, BasicAuth
+from gnmi.async_session import AsyncSession
+from gnmi.tls import TLSConfig, get_server_certificate
 from gnmi.api import capabilities, delete, get, replace, subscribe, update
 
 __all__ = [
     "BasicAuth",
+    "AsyncSession",
     "Session",
     "TLSConfig",
     "capabilities",
@@ -25,4 +28,5 @@ __all__ = [
     "replace",
     "subscribe",
     "update",
+    "get_server_certificate",
 ]

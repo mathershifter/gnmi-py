@@ -19,7 +19,7 @@ proto:
 	uv run --group dev sh scripts/genprotos.sh
 
 docs:
-	cd docs && make html
+	cd docs && uv run make html
 	@echo "\033[95m\n\nBuild successful! View the docs homepage at docs/_build/html/index.html.\n\033[0m"
 
 bump-patch: ## Bump the patch version (x.y.Z), commit, and tag

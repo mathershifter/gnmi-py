@@ -19,8 +19,8 @@ import gnmi
 
 # -- Project information -----------------------------------------------------
 
-project = "gNMI-py"
-copyright = "2025, Arista Inc"
+project = "gnmi-py"
+copyright = "202y, Arista Inc"
 author = "Jesse Mather"
 
 # The full version, including alpha/beta/rc tags

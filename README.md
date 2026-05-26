@@ -164,8 +164,8 @@ with Session("r1.lab:6030", tls=tls) as sess:
 deadline handling:
 
 ```python
+import grpc
 from gnmi import Session
-from gnmi.exceptions import GrpcDeadlineExceeded
 
 with Session("r1.lab:6030", insecure=True) as sess:
     try:
@@ -174,17 +174,24 @@ with Session("r1.lab:6030", insecure=True) as sess:
                 break  # ONCE mode finished
             for upd in resp.update.updates:
                 print(upd.path, upd.value.value)
-    except GrpcDeadlineExceeded:
-        pass
+    except grpc.RpcError as e:
+        if e.code() != grpc.StatusCode.DEADLINE_EXCEEDED:
+            raise
 ```
 
-Note: the top-level `subscribe()` helper currently swallows
-`GrpcDeadlineExceeded` (see `AUDIT.md` bug #7) — use `Session.subscribe`
-when you need to distinguish a timeout from a clean stream end.
+`AsyncSession.subscribe` works the same way — `async for` over the
+iterator and catch `grpc.RpcError` (which `grpc.aio.AioRpcError`
+subclasses).
 
 ## Exceptions
 
-`gnmi.exceptions` defines:
+`gnmi-py` propagates the native gRPC exceptions without translation:
 
-- `GrpcError` — non-OK gRPC status wrapped with a parsed `Status`
-- `GrpcDeadlineExceeded` — subclass of `GrpcError` for timeout convenience
+- **Sync**: `Session.*` raises `grpc.RpcError` on non-OK status.
+- **Async**: `AsyncSession.*` raises `grpc.aio.AioRpcError`
+  (a subclass of `grpc.RpcError`, so `except grpc.RpcError` catches
+  both transports uniformly).
+
+Use `e.code()` (`grpc.StatusCode.*`) to switch on the failure mode and
+`e.details()` for the server-supplied message. `gnmi.exceptions` only
+contains internal markers like `GnmiDeprecationError`.

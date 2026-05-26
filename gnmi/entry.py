@@ -1,98 +1,36 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
+"""
+gnmi.entry — thin sync entry point for the `gnmip` console script.
+
+All command-line wiring lives in :mod:`gnmi.cli`; this module just hooks
+up the SIGINT handler and dispatches to the click command group.
+"""
 import signal
 import sys
 
-from gnmi.session import Session, TLSConfig
-from gnmi.models import Subscription
-from gnmi.exceptions import GrpcDeadlineExceeded
-from gnmi import cli, util
 
 def signal_handler(*_, **__):
     sys.exit(0)
 
-def main():
-    # Install the SIGINT handler only when actually invoked — installing
-    # at import time clobbers the handler for anyone who imports
-    # gnmi.entry (notably the test suite and library consumers).
+
+def main() -> None:
+    # Install the SIGINT handler only when actually invoked. Installing at
+    # import time would clobber the handler for anyone who imports
+    # gnmi.entry (notably tests and library consumers).
     signal.signal(signal.SIGINT, signal_handler)
 
     try:
-        cnf = cli.load_conf()
-    except ImportError as e:
+        from gnmi.cli import cli, load_rc
+    except ImportError:
         print("Please install w/ 'gnmi[cli]' to use the CLI")
         sys.exit(1)
 
-    if cnf.debug_grpc:
-        util.enable_grpc_debuging()
-
-    grpc_options: dict = {}
-    tls_config = None
-    if cnf.tls:
-        tls_config = TLSConfig(
-            ca_cert=cnf.tls.ca_cert,
-            client_cert=cnf.tls.cert,
-            client_key=cnf.tls.key,
-            get_server_cert=cnf.tls.get_server_certificates
-        )
-    sess = Session(
-        cnf.target,
-        metadata=cnf.metadata,
-        insecure=cnf.insecure,
-        tls=tls_config,
-        grpc_options=grpc_options,
-    )
-
-    if cnf.capabilities:
-        cap_response = sess.capabilities()
-        print(f"gNMI Version: {cap_response.gnmi_version}")
-        print(
-            f"Encodings: {', '.join([i.name for i in cap_response.supported_encodings])}"
-        )
-        print("Models:")
-        for model in cap_response.supported_models:
-            print(f" {model.name}")
-            print(f"    Version:      {model.version or 'n/a'}")
-            print(f"    Organization: {model.organization}")
-
-    elif cnf.get:
-        rsp = sess.get(
-            paths=cnf.get.paths,
-            prefix=cnf.get.prefix,
-            encoding=cnf.get.encoding,
-            data_type=cnf.get.type
-        )
-
-        for notif in rsp.notifications:
-            cli.write_notification(notif, cnf.pretty)
-
-    elif cnf.subscribe:
-        subs = []
-        for sub in cnf.subscribe.subscriptions:
-            subs.append(Subscription(
-                path=sub.path,
-                mode=sub.mode,
-                sample_interval=sub.sample_interval,
-                heartbeat_interval=sub.heartbeat_interval,
-                suppress_redundant=sub.suppress_redundant
-            ))
-        try:
-            for resp in sess.subscribe(
-                subscriptions=subs,
-                prefix=cnf.subscribe.prefix,
-                encoding=cnf.subscribe.encoding,
-                mode=cnf.subscribe.mode,
-                qos=cnf.subscribe.qos,
-                aggregate=cnf.subscribe.allow_aggregation,
-            ):
-                if resp.sync_response:
-                    if cnf.subscribe.mode.lower() == "once":
-                        break
-                    continue
-                cli.write_notification(resp.update, cnf.pretty)
-        except GrpcDeadlineExceeded:
-            return
+    # rc file -> click defaults. --config FILE (handled by the group's
+    # configuration_option) layers on top; explicit CLI args layer above
+    # that.
+    cli.main(default_map=load_rc(), prog_name="gnmip")
 
 
 if __name__ == "__main__":

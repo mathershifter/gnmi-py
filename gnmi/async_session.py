@@ -1,22 +1,11 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
-# Arista Networks, Inc. Confidential and Proprietary.
-"""
-gnmi.session
-~~~~~~~~~~~~~~~~
+from typing import Sequence, AsyncIterable
 
-Implementation if gnmi.session API
+from grpc.aio import Channel, insecure_channel, secure_channel
+from grpc import ssl_channel_credentials
 
-"""
-import grpc
-
-from gnmi.proto import gnmi_ext_pb2 as ext_pb
-from gnmi.proto import gnmi_pb2_grpc
-
-from typing import Sequence, Iterable
-
-from gnmi import util
-
+from gnmi.util import prepare_metadata
+from gnmi.proto import gnmi_ext_pb2 as ext_pb # type: ignore
+from gnmi.proto import gnmi_pb2_grpc # type: ignore
 from gnmi.tls import get_server_certificate, TLSConfig
 
 from gnmi.models.capabilities import CapabilityRequest, CapabilityResponse
@@ -33,50 +22,27 @@ from gnmi.models.update import UpdateList
 
 BasicAuth = tuple[str, str]
 
-class Session:
-    r"""Represents a gNMI session
-
-    Basic Usage::
-
-        In [1]: from gnmi.session import Session
-        In [2]: sess = Session(("veos3", 6030),
-        ...:     metadata=[("username", "admin"), ("password", "")])
-
-    """
-
-    def __init__(self,
-        target: str,
-        metadata: dict | None = None,
-        insecure: bool = False,
-        tls: TLSConfig | None = None,
-        grpc_options: dict | None = None,
-    ):
-        self.target = Target(target)
-        self._tls = tls
-
-        if grpc_options is None:
-            self._grpc_options = {}
-        else:
-            self._grpc_options = grpc_options
-
+class AsyncSession:
+    def __init__(self, target: str, metadata: dict | None = None, insecure: bool = False, tls: TLSConfig | None = None, grpc_options: dict | None = None):
+        self._target = Target(target)
+        self._metadata = prepare_metadata(metadata or {})
         self._insecure = insecure
-        self.metadata = util.prepare_metadata(metadata)
+        self._tls = tls
+        self._grpc_options = (grpc_options or {}).items()
 
         self._channel = self._new_channel()
 
-        self._stub = gnmi_pb2_grpc.gNMIStub(self._channel) # type: ignore
+        self._stub = gnmi_pb2_grpc.gNMIStub(self._channel)
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._channel.close()
 
-    def _new_channel(self):
-        # starget = f"{self.target.address.host}:{self.target.address.port}"
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._channel.close(None)
 
+    def _new_channel(self) -> Channel:
         if self._insecure:
-            return grpc.insecure_channel(self.target.address)
+            return insecure_channel(self._target.address)
 
         if not self._tls:
             raise ValueError("no certificates specified, use 'insecure' to bypass")
@@ -86,25 +52,24 @@ class Session:
         private_key = self._tls.client_key or None
 
         if self._tls.get_server_cert:
-            trusted_cert = get_server_certificate(self.target, self._tls.context)
+            trusted_cert = get_server_certificate(self._target, self._tls.context, pem=True)
 
-        creds = grpc.ssl_channel_credentials(
+        creds = ssl_channel_credentials(
             root_certificates=trusted_cert,
             private_key=private_key,
             certificate_chain=chain,
         )
 
-        return grpc.secure_channel(
-            self.target.address, creds, options=list(self._grpc_options.items())
+        return secure_channel(
+            self._target.address, creds, options=list(self._grpc_options)
         )
 
-
-    def capabilities(self) -> CapabilityResponse:
+    async def capabilities(self) -> CapabilityResponse:
         r"""Discover capabilities of the target
 
         Usage::
 
-            In [3]: resp = sess.capabilities()
+            In [3]: resp = await asess.capabilities()
 
             In [4]: resp.gnmi_version
             Out[4]: '0.10.0'
@@ -129,12 +94,12 @@ class Session:
         """
 
         _cr = CapabilityRequest()
-
-        response = self._stub.Capabilities(_cr.encode(), metadata=self.metadata)
+        
+        response = await self._stub.Capabilities(_cr.encode(), metadata=self._metadata)
         return CapabilityResponse.decode(response)
+    
 
-
-    def get(self, 
+    async def get(self, 
             paths: Sequence[PathLike],
             prefix: PathLike | None = None,
             encoding: Encoding | str | int = Encoding.JSON,
@@ -152,9 +117,9 @@ class Session:
             ...:     "/system/memory/state/reserved"
             ...: ]
 
-            In [9]: resp = sess.get(paths, prefix="/", encoding="json")
+            In [9]: resp = await sess.get(paths, prefix="/", encoding="json")
 
-            In [10]: for notif in resp.notifications:
+            In [10]: async for notif in resp.notifications:
                 ...:     for update in notif.updates:
                 ...:         print(update.path, update.value)
                 ...:
@@ -186,11 +151,11 @@ class Session:
             extensions=extensions
         )
 
-        resp = self._stub.Get(_gr.encode(), metadata=self.metadata)
-        return GetResponse.decode(resp)
+        response = await self._stub.Get(_gr.encode(), metadata=self._metadata)
+        return GetResponse.decode(response)
 
 
-    def set(self,
+    async def set(self,
         prefix: PathLike | None = None,
         deletes: Sequence[PathLike] = [],
         replacements: UpdateList = [],
@@ -204,7 +169,7 @@ class Session:
             In [3]: updates = [("/system/config/hostname", "minemeow")]
             or...
             In [3]: updates = [("/system/config/hostname", "minemeow", "string_val")]
-            In [4]: sess.set(updates=updates)
+            In [4]: await sess.set(updates=updates)
 
         :param prefix: subscription path prefix
         :type prefix: str
@@ -227,10 +192,11 @@ class Session:
             union_replacements=union_replacements
         )
 
-        return SetResponse.decode(self._stub.Set(_sr.encode(), metadata=self.metadata))
+        response = await self._stub.Set(_sr.encode(), metadata=self._metadata)
+        return SetResponse.decode(response)
 
 
-    def subscribe(self, 
+    async def subscribe(self, 
         subscriptions: Sequence[str | Path | Subscription],
         prefix: PathLike | None = None,
         encoding: Encoding | str | int = "json",
@@ -238,7 +204,7 @@ class Session:
         qos: int = 0,
         aggregate: bool = False,
         timeout: int | None = None
-    ) -> Iterable[SubscribeResponse]:
+    ) -> AsyncIterable[SubscribeResponse]:
         r"""Subscribe to state updates from the target
 
         Usage::
@@ -257,7 +223,7 @@ class Session:
             ...: )
 
             In [60]: try:
-                ...:     for resp in responses:
+                ...:     async for resp in responses:
                 ...:         prefix = resp.update.prefix
                 ...:         for update in resp.update.updates:
                 ...:             path = prefix + update.path
@@ -307,5 +273,5 @@ class Session:
                     qos=qos
             )).encode()
 
-        for r in self._stub.Subscribe(_sr(), timeout=timeout, metadata=self.metadata):
+        async for r in self._stub.Subscribe(_sr(), timeout=timeout, metadata=self._metadata):
             yield SubscribeResponse.decode(r)
