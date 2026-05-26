@@ -68,22 +68,29 @@ gnmip --insecure -u admin localhost:6030 subscribe /system | \
 ### `~/.gnmirc`
 
 `gnmip` reads `~/.gnmirc` (or `~/_gnmirc`) if present. Override the
-search directory with `GNMIRC_PATH`. The file is YAML and matches the
-shape of the `Config` model in `gnmi/config.py`. Example:
+search directory with `GNMIRC_PATH`. The file is **TOML** and matches
+the shape of the `Config` model in `gnmi/config.py`. Example:
 
-```yaml
-target: r1.lab:6030
-insecure: true
-metadata:
-  username: admin
-  password: ""
-subscribe:
-  encoding: json
-  mode: stream
-  subscriptions:
-    - path: /interfaces
-      mode: on-change
+```toml
+target = "r1.lab:6030"
+insecure = true
+
+[metadata]
+username = "admin"
+password = ""
+
+[subscribe]
+encoding = "json"
+mode = "stream"
+
+[[subscribe.subscriptions]]
+path = "/interfaces"
+mode = "on-change"
 ```
+
+`.toml` / `.yaml` / `.yml` files passed elsewhere via the config loader
+are dispatched by extension; the bare `.gnmirc` / `_gnmirc` names are
+always parsed as TOML.
 
 ## Python API
 
