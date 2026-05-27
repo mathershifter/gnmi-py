@@ -10,5 +10,5 @@ class Sinker(Protocol, Generic[T]):
     def send(self, data: T) -> None: ...
 
 
-def render(data: BaseModel, sinker: Sinker) -> None:
-    sinker.send(data)
+# def render(data: BaseModel, sinker: Sinker) -> None:
+#     sinker.send(data)

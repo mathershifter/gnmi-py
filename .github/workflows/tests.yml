@@ -16,11 +16,11 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.14"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -31,8 +31,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync
-      - if: ${{ matrix.python-version == '3.9' }}
-        run: uv run --locked --group dev sh scripts/genprotos.sh
+      # - if: ${{ matrix.python-version == '3.9' }}
+      #   run: uv run --locked --group dev sh scripts/genprotos.sh
       - run: uv run --locked --group test ruff check
       - run: uv run --locked --group test pytest tests/
 

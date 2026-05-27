@@ -1,31 +1,18 @@
 
-from typing import Any
 import json
-from decimal import Decimal
 from gnmi.models.capabilities import CapabilityResponse
 from gnmi.models.notification import Notification
 from gnmi.outputs.output import Sinker
 
-def _value_to_json(v: Any) -> Any:
-    if isinstance(v, bytes):
-        return v.decode()
-    elif isinstance(v, list):
-        return [_value_to_json(i) for i in v]
-    elif isinstance(v, dict):
-        return {k: _value_to_json(v) for k, v in v.items()}
-    elif isinstance(v, (str, int, float, bool)) or v is None:
-        return v
-    elif isinstance(v, Decimal):
-            return float(v)
-    else:
-        raise TypeError(f"Unsupported type for JSON serialization: {type(v)}")
 
 
 class JsonNotification(Sinker):
     def send(self, data: Notification) -> None:
+        target = str(data.prefix.target) if data.prefix and data.prefix.target else ""
         out = {
             "timestamp": data.timestamp,
             "prefix": str(data.prefix),
+            "target": target,
             "atomic": data.atomic,
             "updates": [],
             "deletes": [],
@@ -33,14 +20,13 @@ class JsonNotification(Sinker):
         for update in data.updates:
             out["updates"].append({
                 "path": str(update.path),
-                "val": _value_to_json(update.value.value),
+                "val": update.value.to_json(),
             })
         for delete in data.deletes:
             out["deletes"].append({
                 "path": str(delete)
             })
         print(json.dumps(out))
-            
 
 class JsonCapabilities(Sinker):
     def send(self, data: CapabilityResponse) -> None:

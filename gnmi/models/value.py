@@ -128,6 +128,7 @@ class ValueType(enum.Enum):
     def from_str(cls, s: str) -> "ValueType":
         return cls[constantize(s)]
 
+
 @dataclass
 class Value(Generic[T], BaseModel[pb.TypedValue]):
     """A typed gNMI leaf value.
@@ -149,6 +150,22 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
     def __str__(self) -> str:
         return str(self.val)
 
+
+    def to_json(self) -> Any:
+        v = self.val
+        if isinstance(v, bytes):
+            return v.decode()
+        elif isinstance(v, list):
+            return [i.to_json() for i in v]
+        elif isinstance(v, dict):
+            return {k: v.to_json() for k, v in v.items()}
+        elif isinstance(v, (str, int, float, bool)) or v is None:
+            return v
+        elif isinstance(v, Decimal):
+                return float(v)
+        else:
+            raise TypeError(f"Unsupported type for JSON serialization: {type(v)}")
+        
     def encode(self) -> pb.TypedValue:
         params = {}
         val_type = self.val_type

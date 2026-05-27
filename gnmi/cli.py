@@ -31,6 +31,7 @@ from gnmi.models import Subscription
 from gnmi.models.path import Path
 from gnmi.models.target import target_factory
 from gnmi.outputs.pretty import PrettyCapabilities, PrettyNotification
+from gnmi.outputs.lines import StreamingNotification
 from gnmi.outputs.json import JsonNotification, JsonCapabilities
 from gnmi.tls import TLSConfig
 
@@ -345,7 +346,7 @@ async def subscribe(
                 # PrettyNotification().send(resp.update)
                 
                 if format == "pretty":
-                    PrettyNotification().send(resp.update)
+                    StreamingNotification().send(resp.update)
                 else:
                     JsonNotification().send(resp.update)
         except grpc.RpcError as e:

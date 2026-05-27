@@ -7,7 +7,6 @@ gnmi.entry — thin sync entry point for the `gnmip` console script.
 All command-line wiring lives in :mod:`gnmi.cli`; this module just hooks
 up the SIGINT handler and dispatches to the click command group.
 """
-import asyncio
 
 
 # def signal_handler(*_, **__):

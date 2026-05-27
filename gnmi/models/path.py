@@ -65,9 +65,15 @@ class Path(BaseModel[pb.Path]):
 
         if self.origin:
             path = ":".join([self.origin, path])
-
         return path
 
+    def __truediv__(self, scalar):
+        return self.__add__(scalar)
+    
+    def __add__(self, scalar):
+        right = path_factory(scalar)
+        return self.append(right)
+    
     def is_empty(self):
         return len(self.elem) == 0 and not self.origin  and not self.target
 
@@ -86,7 +92,6 @@ class Path(BaseModel[pb.Path]):
         return cls(origin=origin, elem=elems)
         
 
-
     def append(self, other: "str | Path | pb.Path", force: bool = False) -> "Path":
         other = path_factory(other)
 
@@ -101,10 +106,6 @@ class Path(BaseModel[pb.Path]):
             elem=list(self.elem) + list(other.elem),
             origin=self.origin,
             target=self.target)
-
-
-    def __add__(self, other: "str | Path | pb.Path") -> "Path":
-        return self.append(other)
 
 
     def encode(self) -> pb.Path:

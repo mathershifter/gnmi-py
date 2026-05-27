@@ -11,7 +11,7 @@ End users:
 
 ```bash
 pip install git+https://github.com/mathershifter/gnmi-py.git
-# or, for the CLI extras (pydantic-based config):
+# or, for the CLI extras (click+rich):
 pip install "gnmi[cli] @ git+https://github.com/mathershifter/gnmi-py.git"
 ```
 
