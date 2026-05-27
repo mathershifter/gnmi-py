@@ -33,23 +33,14 @@ import asyncio
 
 
 def main():
-    loop = asyncio.get_event_loop()
+
     try:
-        try:
-            from gnmi.cli import cli, load_rc
-        except ImportError:
-            print("Please install w/ 'gnmi[cli]' to use the CLI")
-            exit(1)
-        cli.main(default_map=load_rc(), prog_name="gnmip")
-    except KeyboardInterrupt:
-        print("\nInterrupted.")
-        # Cancel all running tasks
-        for task in asyncio.all_tasks(loop):
-            task.cancel()
-        # Allow loop to finish cancelling tasks
-        loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(loop), return_exceptions=True))
-    finally:
-        loop.close()
+        from gnmi.cli import cli, load_rc
+    except ImportError:
+        print("Please install w/ 'gnmi[cli]' to use the CLI")
+        exit(1)
+    cli.main(default_map=load_rc(), prog_name="gnmip")
+
 
 if __name__ == "__main__":
     main()

@@ -4,8 +4,8 @@ from grpc.aio import Channel, insecure_channel, secure_channel
 from grpc import ssl_channel_credentials
 
 from gnmi.util import prepare_metadata
-from gnmi.proto import gnmi_ext_pb2 as ext_pb # type: ignore
-from gnmi.proto import gnmi_pb2_grpc # type: ignore
+from gnmi.proto import gnmi_ext_pb2 as ext_pb
+from gnmi.proto import gnmi_pb2_grpc
 from gnmi.tls import get_server_certificate, TLSConfig
 
 from gnmi.models.capabilities import CapabilityRequest, CapabilityResponse

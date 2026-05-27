@@ -10,7 +10,6 @@ from gnmi.util import escape_string
 from gnmi.models.model import BaseModel
 
 
-
 @dataclass
 class PathElem(BaseModel[pb.PathElem]):
     name: str

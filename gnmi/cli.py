@@ -150,10 +150,12 @@ def _build_prefix(prefix: str, with_target: bool, target: str) -> Path | None:
 def async_command(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        # Get or create the event loop
-        loop = asyncio.get_event_loop()
-        # loop = asyncio.get_running_loop()
-        return loop.run_until_complete(f(*args, **kwargs))
+        try:
+            return asyncio.run(f(*args, **kwargs))
+        except asyncio.CancelledError:
+            print("Task was aborted/canceled.")
+        except KeyboardInterrupt:
+            print("\nInterrupted.")
     return wrapper
 
 # ---------------------------------------------------------------------------
