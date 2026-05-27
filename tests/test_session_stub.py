@@ -156,9 +156,9 @@ def test_session_tls_branch_builds_secure_channel():
         return mock.MagicMock()
 
     with mock.patch.object(
-        session_mod.grpc, "ssl_channel_credentials", side_effect=fake_creds
+        session_mod, "ssl_channel_credentials", side_effect=fake_creds
     ), mock.patch.object(
-        session_mod.grpc, "secure_channel", side_effect=fake_secure_channel
+        session_mod, "secure_channel", side_effect=fake_secure_channel
     ):
         Session("r1.lab:6030", tls=tls)
 

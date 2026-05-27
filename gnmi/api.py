@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
-from typing import Iterable, AsyncIterable
+from typing import Iterable, AsyncIterable, Sequence
 
 from gnmi.tls import TLSConfig
 from gnmi.session import Session, BasicAuth
@@ -9,6 +9,7 @@ from gnmi.async_session import AsyncSession
 from gnmi.models import Notification, SetResponse, Subscription
 from gnmi.models.path import PathLike
 from gnmi.models.update import UpdateList
+from gnmi.models.target import TargetLike
 
 __all__ = ["capabilities", "delete", "get", "replace", "subscribe", "update"]
 
@@ -62,7 +63,7 @@ def capabilities(
         return sess.capabilities()
 
 async def acapabilities(
-    target: str,
+    target: TargetLike,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
     tls: TLSConfig | None = None,
@@ -92,7 +93,7 @@ async def acapabilities(
         return await sess.capabilities()  
 
 def get(
-    target: str,
+    target: TargetLike,
     paths: list,
     prefix: PathLike | None = None,
     encoding: str = "json",
@@ -146,8 +147,8 @@ def get(
             yield notif
 
 async def aget(
-    target: str,
-    paths: list,
+    target: TargetLike,
+    paths: Sequence[PathLike],
     prefix: PathLike | None = None,
     encoding: str = "json",
     data_type: str = "all",
@@ -181,8 +182,8 @@ async def aget(
             yield notif
 
 def subscribe(
-    target: str,
-    paths: list,
+    target: TargetLike,
+    paths: Sequence[PathLike],
     auth: BasicAuth = ("", ""),
     prefix: PathLike | None = None,
     encoding: str = "json",
@@ -273,8 +274,8 @@ def subscribe(
             yield resp.update
 
 async def asubscribe(
-    target: str,
-    paths: list,
+    target: TargetLike,
+    paths: Sequence[PathLike],
     auth: BasicAuth = ("", ""),
     prefix: PathLike | None = None,
     encoding: str = "json",
@@ -326,8 +327,8 @@ async def asubscribe(
             yield resp.update
 
 def delete(
-    target: str,
-    paths: list[PathLike],
+    target: TargetLike,
+    paths: Sequence[PathLike],
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
@@ -362,8 +363,8 @@ def delete(
         return sess.set(deletes=paths, prefix=prefix)
 
 async def adelete(
-    target: str,
-    paths: list[PathLike],
+    target: TargetLike,
+    paths: Sequence[PathLike],
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
@@ -399,7 +400,7 @@ async def adelete(
         return await sess.set(deletes=paths, prefix=prefix)
 
 def replace(
-    target: str,
+    target: TargetLike,
     replacements: UpdateList,
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
@@ -436,7 +437,7 @@ def replace(
         return sess.set(replacements=replacements, prefix=prefix)
 
 async def areplace(
-    target: str,
+    target: TargetLike,
     replacements: UpdateList,
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
@@ -459,7 +460,7 @@ async def areplace(
         return await sess.set(replacements=replacements, prefix=prefix)
 
 def update(
-    target: str,
+    target: TargetLike,
     updates: UpdateList,
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),
@@ -495,7 +496,7 @@ def update(
         return sess.set(updates=updates, prefix=prefix)
 
 async def aupdate(
-    target: str,
+    target: TargetLike,
     updates: UpdateList,
     prefix: PathLike | None = None,
     auth: BasicAuth = ("", ""),

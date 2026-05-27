@@ -31,7 +31,7 @@ def test_get_server_certificate_uses_provided_context_and_returns_der():
 
     with mock.patch.object(socket, "create_connection", return_value=conn) as cc:
         got = tls_mod.get_server_certificate(
-            Target(address="r1.lab:6030"), context=ctx
+            Target("r1.lab", 6030), context=ctx
         )
 
     assert got == fake_der
@@ -58,7 +58,7 @@ def test_get_server_certificate_pem_form():
          mock.patch.object(ssl, "DER_cert_to_PEM_cert",
                            return_value="-----BEGIN CERT-----...\n") as conv:
         got = tls_mod.get_server_certificate(
-            Target(address="r1.lab:6030"), context=ctx, pem=True
+            Target("r1.lab", 6030), context=ctx, pem=True
         )
 
     conv.assert_called_once_with(fake_der)
@@ -78,7 +78,7 @@ def test_get_server_certificate_returns_none_when_no_cert():
 
     with mock.patch.object(socket, "create_connection", return_value=conn):
         got = tls_mod.get_server_certificate(
-            Target(address="r1.lab:6030"), context=ctx
+            Target("r1.lab", 6030), context=ctx
         )
     assert got is None
 
@@ -93,7 +93,7 @@ def test_get_server_certificate_propagates_handshake_failure():
     with mock.patch.object(socket, "create_connection", return_value=conn):
         with pytest.raises(ssl.SSLCertVerificationError):
             tls_mod.get_server_certificate(
-                Target(address="r1.lab:6030"), context=ctx
+                Target("r1.lab", 6030), context=ctx
             )
 
 
@@ -110,6 +110,6 @@ def test_get_server_certificate_default_context_when_none_provided():
 
     with mock.patch.object(ssl, "create_default_context", return_value=ctx) as cdc, \
          mock.patch.object(socket, "create_connection", return_value=conn):
-        tls_mod.get_server_certificate(Target(address="r1.lab:6030"))
+        tls_mod.get_server_certificate(Target("r1.lab", 6030))
 
     cdc.assert_called_once()

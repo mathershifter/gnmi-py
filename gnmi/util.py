@@ -89,8 +89,7 @@ def oneof(*args) -> int:
     the=[]
 
     for i, item in enumerate(args):
-        # if item is not None:
-        if item is not None and item != False and item != 0:
+        if item:
             the.append(i)
 
     if len(the) > 1:

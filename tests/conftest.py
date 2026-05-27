@@ -1,8 +1,9 @@
 import os
 from concurrent import futures
 
-import grpc
+import asyncio
 import pytest
+import grpc
 
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_pb2_grpc
@@ -42,6 +43,12 @@ requires_live_target = pytest.mark.skipif(
 STUB_GNMI_VERSION = "0.10.0-stub"
 STUB_HOSTNAME = "stub-target"
 
+@pytest.fixture(scope="session", autouse=True)
+def event_loop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
 
 def _path_key(p: pb.Path) -> bytes:
     """Stable, hashable key for a proto Path."""

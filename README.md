@@ -37,7 +37,7 @@ Common flags:
 | `--insecure` | skip TLS (plaintext gRPC) |
 | `--tls-ca PATH` | CA cert to validate the target |
 | `--tls-cert PATH` / `--tls-key PATH` | client cert / key (mTLS) |
-| `--tls-get-target-certificates` | early-validate the target cert before opening the gRPC channel |
+| `--tls-get-target-certificate` | early-validate the target cert before opening the gRPC channel |
 | `--host-override HOST` | override the gRPC SNI / authority |
 | `-u USER` / `-p PASS` | username / password metadata |
 | `--encoding {json,bytes,proto,ascii,json-ietf}` | wire encoding |

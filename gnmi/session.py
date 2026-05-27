@@ -8,12 +8,13 @@ gnmi.session
 Implementation if gnmi.session API
 
 """
-import grpc
+from typing import Sequence, Iterable
+
+from grpc import ssl_channel_credentials, secure_channel, insecure_channel, Channel
 
 from gnmi.proto import gnmi_ext_pb2 as ext_pb
 from gnmi.proto import gnmi_pb2_grpc
 
-from typing import Sequence, Iterable
 
 from gnmi import util
 
@@ -28,7 +29,7 @@ from gnmi.models.set import SetRequest, SetResponse
 from gnmi.models.subscribe import SubscribeRequest, SubscribeResponse
 from gnmi.models.subscription import Subscription
 from gnmi.models.subscription_list import SubscriptionList
-from gnmi.models.target import Target
+from gnmi.models.target import TargetLike, target_factory
 from gnmi.models.update import UpdateList
 
 BasicAuth = tuple[str, str]
@@ -45,13 +46,13 @@ class Session:
     """
 
     def __init__(self,
-        target: str,
+        target: TargetLike,
         metadata: dict | None = None,
         insecure: bool = False,
         tls: TLSConfig | None = None,
         grpc_options: dict | None = None,
     ):
-        self.target = Target(target)
+        self.target = target_factory(target)
         self._tls = tls
 
         if grpc_options is None:
@@ -72,11 +73,9 @@ class Session:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._channel.close()
 
-    def _new_channel(self):
-        # starget = f"{self.target.address.host}:{self.target.address.port}"
-
+    def _new_channel(self) -> Channel:
         if self._insecure:
-            return grpc.insecure_channel(self.target.address)
+            return insecure_channel(str(self.target))
 
         if not self._tls:
             raise ValueError("no certificates specified, use 'insecure' to bypass")
@@ -86,16 +85,18 @@ class Session:
         private_key = self._tls.client_key or None
 
         if self._tls.get_server_cert:
-            trusted_cert = get_server_certificate(self.target, self._tls.context)
-
-        creds = grpc.ssl_channel_credentials(
+            trusted_cert = get_server_certificate(self.target, self._tls.context, pem=True)
+            creds = ssl_channel_credentials(root_certificates=trusted_cert)
+            return secure_channel(str(self.target), creds, options=list(self._grpc_options))
+        
+        creds = ssl_channel_credentials(
             root_certificates=trusted_cert,
             private_key=private_key,
             certificate_chain=chain,
         )
 
-        return grpc.secure_channel(
-            self.target.address, creds, options=list(self._grpc_options.items())
+        return secure_channel(
+            str(self.target), creds, options=list(self._grpc_options.items())
         )
 
 

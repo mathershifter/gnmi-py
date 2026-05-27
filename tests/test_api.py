@@ -3,7 +3,6 @@
 # Arista Networks, Inc. Confidential and Proprietary.
 
 from typing import Any
-import pytest
 
 from gnmi import capabilities, get, replace, update, subscribe
 from gnmi.models import CapabilityResponse, Update, Path

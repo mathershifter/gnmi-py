@@ -9,8 +9,6 @@ import pytest
 
 from gnmi.proto import gnmi_pb2 as pb
 
-from gnmi.models.error import Error
-from gnmi.models.notification import Notification
 from gnmi.models.subscribe import Poll, SubscribeRequest, SubscribeResponse
 from gnmi.models.subscription import Subscription
 from gnmi.models.subscription_list import SubscriptionList, SubscriptionListMode

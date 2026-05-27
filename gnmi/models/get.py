@@ -5,7 +5,7 @@ import enum
 
 from dataclasses import dataclass, field
 
-from gnmi.models.path import Path, Paths, PathDescriptor, path_factory
+from gnmi.models.path import Path, Paths, PathDescriptor
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_ext_pb2 as ext_pb2
 from gnmi.models.encoding import EncodingDescriptor

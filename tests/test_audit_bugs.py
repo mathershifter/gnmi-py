@@ -17,7 +17,6 @@ descriptor implementation.
 """
 from __future__ import annotations
 
-from re import S
 import signal
 import sys
 from unittest import mock
@@ -62,9 +61,9 @@ def test_session_get_server_cert_invokes_handshake():
     ), mock.patch.object(
         session_mod, "get_server_certificate", return_value={"subject": ()}
     ) as fake_fetch, mock.patch.object(
-        session_mod.grpc, "ssl_channel_credentials", return_value=mock.sentinel.creds
+        session_mod, "ssl_channel_credentials", return_value=mock.sentinel.creds
     ), mock.patch.object(
-        session_mod.grpc, "secure_channel", return_value=mock.MagicMock()
+        session_mod, "secure_channel", return_value=mock.MagicMock()
     ):
         Session("localhost:6030", tls=tls)
 
@@ -101,7 +100,7 @@ def test_session_get_server_cert_propagates_validation_failure():
         "get_server_certificate",
         side_effect=ssl.SSLCertVerificationError("validation failed"),
     ), mock.patch.object(
-        session_mod.grpc, "secure_channel", return_value=mock.MagicMock()
+        session_mod, "secure_channel", return_value=mock.MagicMock()
     ):
         with pytest.raises(ssl.SSLCertVerificationError):
             Session("localhost:6030", tls=tls)

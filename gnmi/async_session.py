@@ -17,14 +17,14 @@ from gnmi.models.set import SetRequest, SetResponse
 from gnmi.models.subscribe import SubscribeRequest, SubscribeResponse
 from gnmi.models.subscription import Subscription
 from gnmi.models.subscription_list import SubscriptionList
-from gnmi.models.target import Target
+from gnmi.models.target import TargetLike, target_factory
 from gnmi.models.update import UpdateList
 
 BasicAuth = tuple[str, str]
 
 class AsyncSession:
-    def __init__(self, target: str, metadata: dict | None = None, insecure: bool = False, tls: TLSConfig | None = None, grpc_options: dict | None = None):
-        self._target = Target(target)
+    def __init__(self, target: TargetLike, metadata: dict | None = None, insecure: bool = False, tls: TLSConfig | None = None, grpc_options: dict | None = None):
+        self._target = target_factory(target)
         self._metadata = prepare_metadata(metadata or {})
         self._insecure = insecure
         self._tls = tls
@@ -42,7 +42,7 @@ class AsyncSession:
 
     def _new_channel(self) -> Channel:
         if self._insecure:
-            return insecure_channel(self._target.address)
+            return insecure_channel(str(self._target))
 
         if not self._tls:
             raise ValueError("no certificates specified, use 'insecure' to bypass")
@@ -61,7 +61,7 @@ class AsyncSession:
         )
 
         return secure_channel(
-            self._target.address, creds, options=list(self._grpc_options)
+            str(self._target), creds, options=list(self._grpc_options)
         )
 
     async def capabilities(self) -> CapabilityResponse:

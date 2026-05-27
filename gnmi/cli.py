@@ -15,12 +15,10 @@ overridable with ``--config``). Top-level keys feed group options;
 sections like ``[subscribe]`` feed the matching subcommand.
 """
 import asyncio
-import json
 import os
 import pathlib
-import typing as t
 from importlib.metadata import version
-
+from functools import wraps
 import click
 import click_config_file
 import grpc
@@ -30,8 +28,12 @@ from grpc import __version__ as grpc_version
 from gnmi import util
 from gnmi.async_session import AsyncSession
 from gnmi.models import Subscription
-from gnmi.models.notification import Notification
+from gnmi.models.path import Path
+from gnmi.models.target import target_factory
+from gnmi.outputs.pretty import PrettyCapabilities, PrettyNotification
+from gnmi.outputs.json import JsonNotification, JsonCapabilities
 from gnmi.tls import TLSConfig
+
 
 GNMIRC_PATH = os.environ.get("GNMIRC_PATH", pathlib.Path.home())
 # Always TOML. Distinct from --config FILE (which overrides rc defaults).
@@ -95,9 +97,10 @@ def load_rc() -> dict:
 
 ENCODINGS = ["json", "bytes", "proto", "ascii", "json-ietf"]
 
+FORMATTERS = ["pretty", "json", "jsonl", "yaml"]
 
 def _build_tls_config(
-    ca: str, cert: str, key: str, get_target_certs: bool
+    ca: str, cert: str, key: str, get_target_certs: bool, no_verify: bool
 ) -> TLSConfig | None:
     if not (ca or cert or key or get_target_certs):
         return None
@@ -106,6 +109,7 @@ def _build_tls_config(
         client_cert=open(cert, "rb").read() if cert else None,
         client_key=open(key, "rb").read() if key else None,
         get_server_cert=get_target_certs,
+        no_verify=no_verify,
     )
 
 
@@ -117,7 +121,8 @@ def _new_session(ctx: click.Context) -> AsyncSession:
         metadata = {"username": o["username"], "password": o["password"] or ""}
 
     tls = _build_tls_config(
-        o["tls_ca"], o["tls_cert"], o["tls_key"], o["tls_get_target_certificates"]
+        o["tls_ca"], o["tls_cert"], o["tls_key"], o["tls_get_target_certificate"],
+        o["tls_no_verify"]
     )
 
     grpc_options: dict = {}
@@ -133,43 +138,23 @@ def _new_session(ctx: click.Context) -> AsyncSession:
     )
 
 
-# ---------------------------------------------------------------------------
-# Output helper (used by get / subscribe)
-# ---------------------------------------------------------------------------
+def _build_prefix(prefix: str, with_target: bool, target: str) -> Path | None:
+    """Build a prefix Path, optionally injecting the session host as ``Path.target``."""
+    if not prefix and not with_target:
+        return None
+    p = Path.from_str(prefix) if prefix else Path(elem=[])
+    if with_target:
+        p.target = target_factory(target).hostaddr
+    return p
 
-def write_notification(n: Notification, pretty: bool = False) -> None:
-    notif: dict[str, t.Any] = {}
-
-    updates = []
-    for u in n.updates:
-        val = u.value
-        if val:
-            if isinstance(val.value, bytes):
-                val = val.value.decode("utf-8")
-            else:
-                val = str(val.value)
-        updates.append({"path": str(u.path), "value": val})
-
-    deletes = [{"path": str(d)} for d in n.deletes]
-
-    if n.atomic:
-        notif["atomic"] = True
-
-    prefix = str(n.prefix)
-    if prefix:
-        notif["prefix"] = prefix
-    if n.timestamp:
-        notif["timestamp"] = n.timestamp
-    if updates:
-        notif["updates"] = updates
-    if deletes:
-        notif["deletes"] = deletes
-
-    if pretty:
-        click.echo(json.dumps(notif, separators=(", ", ": "), indent=2))
-    else:
-        click.echo(json.dumps(notif))
-
+def async_command(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        # Get or create the event loop
+        loop = asyncio.get_event_loop()
+        # loop = asyncio.get_running_loop()
+        return loop.run_until_complete(f(*args, **kwargs))
+    return wrapper
 
 # ---------------------------------------------------------------------------
 # Click command group + subcommands
@@ -178,16 +163,18 @@ def write_notification(n: Notification, pretty: bool = False) -> None:
 @click.group()
 @click.version_option(format_version(), prog_name="gnmip")
 @click.argument("target")
-@click.option("--pretty", is_flag=True, default=False, help="pretty-print notifications")
+@click.option("-j", "--json", is_flag=True, default=False, help="output notifications as JSON, short for --format json")
+@click.option("--format", default="pretty", type=click.Choice(FORMATTERS), help="output format (json, yaml, etc.)")
 @click.option("--tls-ca", default="", type=click.Path(), help="certificate authority")
 @click.option("--tls-cert", default="", type=click.Path(), help="client certificate")
 @click.option("--tls-key", default="", type=click.Path(), help="client key")
 @click.option(
-    "--tls-get-target-certificates",
+    "--tls-get-target-certificate",
     is_flag=True,
     default=False,
     help="fetch and validate the target's TLS cert before opening the gRPC channel",
 )
+@click.option("--tls-no-verify", is_flag=True, default=False, help="disable TLS certificate verification")
 @click.option("--insecure", is_flag=True, default=False, help="disable TLS")
 @click.option("--host-override", default="", help="override gRPC server hostname (SNI)")
 @click.option("--debug-grpc", is_flag=True, default=False, help="enable gRPC debugging")
@@ -204,28 +191,29 @@ def cli(ctx: click.Context, **kwargs) -> None:
     """gNMI client."""
     if kwargs["debug_grpc"]:
         util.enable_grpc_debuging()
+    
+    # The --json flag is a shorthand for --format json, for convenience and backwards compatibility.
+    if kwargs["json"]:
+        kwargs["format"] = "json"
+        del kwargs["json"]
+
     ctx.ensure_object(dict).update(kwargs)
 
 
 @cli.command()
 @click.pass_context
-def capabilities(ctx: click.Context) -> None:
+@async_command
+async def capabilities(ctx: click.Context) -> None:
     """Discover supported models and encodings."""
-    async def _run():
-        async with _new_session(ctx) as sess:
-            cap = await sess.capabilities()
-            click.echo(f"gNMI Version: {cap.gnmi_version}")
-            click.echo(
-                "Encodings: "
-                + ", ".join(e.name for e in cap.supported_encodings)
-            )
-            click.echo("Models:")
-            for m in cap.supported_models:
-                click.echo(f" {m.name}")
-                click.echo(f"    Version:      {m.version or 'n/a'}")
-                click.echo(f"    Organization: {m.organization}")
-    asyncio.run(_run())
+    fmt = ctx.obj["format"]
 
+    async with _new_session(ctx) as sess:
+        cap = await sess.capabilities()
+        if fmt == "pretty":
+            PrettyCapabilities().send(cap)
+        else:
+            JsonCapabilities().send(cap)
+                
 
 @cli.command()
 @click.argument("paths", nargs=-1)
@@ -236,6 +224,12 @@ def capabilities(ctx: click.Context) -> None:
     show_default=True,
 )
 @click.option("--prefix", default="", help="path prefix")
+@click.option(
+    "--prefix-target",
+    is_flag=True,
+    default=False,
+    help="set the prefix path's target field to the session host",
+)
 @click.option(
     "--get-type",
     "get_type",
@@ -244,19 +238,25 @@ def capabilities(ctx: click.Context) -> None:
     show_default=True,
 )
 @click.pass_context
-def get(ctx: click.Context, paths, encoding, prefix, get_type) -> None:
+@async_command
+async def get(ctx: click.Context, paths, encoding, prefix, prefix_target, get_type) -> None:
     """Fetch a snapshot for one or more paths."""
-    async def _run():
-        async with _new_session(ctx) as sess:
-            rsp = await sess.get(
-                paths=list(paths),
-                prefix=prefix or None,
-                encoding=encoding,
-                data_type=get_type,
-            )
-            for notif in rsp.notifications:
-                write_notification(notif, ctx.obj["pretty"])
-    asyncio.run(_run())
+    prefix_path = _build_prefix(prefix, prefix_target, ctx.obj["target"])
+    fmt = ctx.obj["format"]
+
+    async with _new_session(ctx) as sess:
+        rsp = await sess.get(
+            paths=[p for p in paths],
+            prefix=prefix_path,
+            encoding=encoding,
+            data_type=get_type,
+        )
+        for notif in rsp.notifications:
+            if fmt == "pretty":
+                PrettyNotification().send(notif)
+            else:
+                JsonNotification().send(notif)
+    
 
 
 @cli.command()
@@ -268,6 +268,12 @@ def get(ctx: click.Context, paths, encoding, prefix, get_type) -> None:
     show_default=True,
 )
 @click.option("--prefix", default="", help="path prefix")
+@click.option(
+    "--prefix-target",
+    is_flag=True,
+    default=False,
+    help="set the prefix path's target field to the session host",
+)
 @click.option(
     "--mode",
     type=click.Choice(["stream", "once", "poll"]),
@@ -286,11 +292,13 @@ def get(ctx: click.Context, paths, encoding, prefix, get_type) -> None:
 @click.option("--suppress", is_flag=True, default=False, help="suppress redundant updates")
 @click.option("--qos", type=int, default=0, show_default=True, help="DSCP marking")
 @click.pass_context
-def subscribe(
+@async_command
+async def subscribe(
     ctx: click.Context,
     paths,
     encoding,
     prefix,
+    prefix_target,
     mode,
     submode,
     interval,
@@ -300,6 +308,9 @@ def subscribe(
     qos,
 ) -> None:
     """Subscribe to updates for one or more paths."""
+
+    prefix_path = _build_prefix(prefix, prefix_target, ctx.obj["target"])
+    format = ctx.obj["format"]
 
     def _ns(d: str) -> int:
         return util.parse_duration(d) if d else 0
@@ -315,25 +326,27 @@ def subscribe(
         for p in paths
     ]
 
-    async def _run():
-        async with _new_session(ctx) as sess:
-            try:
-                async for resp in sess.subscribe(
-                    subscriptions=subs,
-                    prefix=prefix or None,
-                    encoding=encoding,
-                    mode=mode,
-                    qos=qos,
-                    aggregate=aggregate,
-                ):
-                    if resp.sync_response:
-                        if mode == "once":
-                            break
-                        continue
-                    write_notification(resp.update, ctx.obj["pretty"])
-            except grpc.RpcError as e:
-                if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
-                    return
-                raise
-
-    asyncio.run(_run())
+    async with _new_session(ctx) as sess:
+        try:
+            async for resp in sess.subscribe(
+                subscriptions=subs,
+                prefix=prefix_path,
+                encoding=encoding,
+                mode=mode,
+                qos=qos,
+                aggregate=aggregate,
+            ):
+                if resp.sync_response:
+                    if mode == "once":
+                        break
+                    continue
+                # PrettyNotification().send(resp.update)
+                
+                if format == "pretty":
+                    PrettyNotification().send(resp.update)
+                else:
+                    JsonNotification().send(resp.update)
+        except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                return
+            raise

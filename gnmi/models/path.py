@@ -79,12 +79,13 @@ class Path(BaseModel[pb.Path]):
             return cls(elem=[])
 
         origin, spl = split_path(p)
-
+        
         for el in spl:
             name, key = parse_elem(el)
             elems.append(PathElem(name=name, key=key))
 
         return cls(origin=origin, elem=elems)
+        
 
 
     def append(self, other: "str | Path | pb.Path", force: bool = False) -> "Path":
@@ -174,7 +175,7 @@ def path_factory(path: PathLike) -> Path:
 
 
 def split_path(path: str) -> tuple[str, list[str]]:
-    """Slice an escaped path into (origin, [elements]).
+    """Slice an escaped path into (target, origin, [elements]).
 
     This is a *separator-only* pass: it respects escape sequences so that
     `\\/`, `\\[`, `\\:` aren't treated as separators, but it preserves the
@@ -213,7 +214,11 @@ def split_path(path: str) -> tuple[str, list[str]]:
             buf = ""
             continue
         elif ch == ':' and not in_key:
-            origin = buf
+            if len(buf) > 0:
+                if not origin:
+                    origin = buf
+                else:
+                    raise ValueError(f"Invalid path: too many ':' separators: {path}")
             buf = ""
             continue
 

@@ -34,82 +34,75 @@ def _run(coro):
 # Happy paths
 # ---------------------------------------------------------------------------
 
-def test_async_capabilities(stub_server):
-    async def go():
-        sess = AsyncSession(stub_server.target, insecure=True)
-        try:
-            return await sess.capabilities()
-        finally:
-            await sess._channel.close(None)
+async def test_async_capabilities(stub_server):
 
-    resp = _run(go())
+    sess = AsyncSession(stub_server.target, insecure=True)
+    try:
+        resp = await sess.capabilities()
+    finally:
+        await sess._channel.close(None)
+
     assert resp.gnmi_version == STUB_GNMI_VERSION
 
 
-def test_async_get_echoes_paths(stub_server):
-    async def go():
-        sess = AsyncSession(stub_server.target, insecure=True)
-        try:
-            return await sess.get(["/system/config/hostname"])
-        finally:
-            await sess._channel.close(None)
+async def test_async_get_echoes_paths(stub_server):
+    sess = AsyncSession(stub_server.target, insecure=True)
+    try:
+        resp = await sess.get(["/system/config/hostname"])
+    finally:
+        await sess._channel.close(None)
 
-    resp = _run(go())
     assert len(resp.notifications) == 1
     upd = resp.notifications[0].updates[0]
     assert str(upd.path) == "/system/config/hostname"
     assert upd.value.value == STUB_HOSTNAME
 
 
-def test_async_set_round_trips_all_ops(stub_server):
-    async def go():
-        sess = AsyncSession(stub_server.target, insecure=True)
-        try:
-            return await sess.set(
-                deletes=["/a/b"],
-                replacements=[("/c/d", "v")],
-                updates=[("/e/f", "v")],
-            )
-        finally:
-            await sess._channel.close(None)
+async def test_async_set_round_trips_all_ops(stub_server):
 
-    resp = _run(go())
+    sess = AsyncSession(stub_server.target, insecure=True)
+    try:
+        resp = await sess.set(
+            deletes=["/a/b"],
+            replacements=[("/c/d", "v")],
+            updates=[("/e/f", "v")],
+        )
+    finally:
+        await sess._channel.close(None)
+
     assert [r.op.name for r in resp.responses] == ["DELETE", "REPLACE", "UPDATE"]
 
 
-def test_async_subscribe_streams_then_sync(stub_server):
-    async def go():
-        sess = AsyncSession(stub_server.target, insecure=True)
-        try:
-            seen = []
-            saw_sync = False
-            async for resp in sess.subscribe(["/a", "/b"], mode="once"):
-                if resp.sync_response:
-                    saw_sync = True
-                    break
-                for upd in resp.update.updates:
-                    seen.append(str(upd.path))
-            return seen, saw_sync
-        finally:
-            await sess._channel.close(None)
+async def test_async_subscribe_streams_then_sync(stub_server):
+    
+    sess = AsyncSession(stub_server.target, insecure=True)
+    try:
+        seen = []
+        saw_sync = False
+        async for resp in sess.subscribe(["/a", "/b"], mode="once"):
+            if resp.sync_response:
+                saw_sync = True
+                break
+            for upd in resp.update.updates:
+                seen.append(str(upd.path))
 
-    seen, saw_sync = _run(go())
+    finally:
+        await sess._channel.close(None)
     assert saw_sync
     assert set(seen) == {"/a", "/b"}
 
 
-def test_async_session_string_target_now_accepted(stub_server):
+async def test_async_session_string_target_now_accepted(stub_server):
     """Regression for the prior API mismatch — AsyncSession now wraps a
     string target the way sync Session does."""
 
-    async def go():
-        sess = AsyncSession(stub_server.target, insecure=True)
-        try:
-            return await sess.capabilities()
-        finally:
-            await sess._channel.close(None)
+    sess = AsyncSession(stub_server.target, insecure=True)
+    try:
+        cap = await sess.capabilities()
+    finally:
+        await sess._channel.close(None)
 
-    assert _run(go()).gnmi_version == STUB_GNMI_VERSION
+    assert cap.gnmi_version == STUB_GNMI_VERSION
 
 
 def test_async_session_requires_tls_or_insecure():
@@ -123,22 +116,20 @@ def test_async_session_requires_tls_or_insecure():
         sess._new_channel()
 
 
-def test_async_session_dict_metadata_is_iterable_of_pairs(stub_server):
+async def test_async_session_dict_metadata_is_iterable_of_pairs(stub_server):
     """String-valued dict metadata must flow through to the server as
     (key, value) pairs."""
 
-    async def go():
-        sess = AsyncSession(
-            stub_server.target,
-            insecure=True,
-            metadata={"username": "u", "password": "p"},
-        )
-        try:
-            await sess.capabilities()
-        finally:
-            await sess._channel.close(None)
+    sess = AsyncSession(
+        stub_server.target,
+        insecure=True,
+        metadata={"username": "u", "password": "p"},
+    )
+    try:
+        await sess.capabilities()
+    finally:
+        await sess._channel.close(None)
 
-    _run(go())
     md = dict(stub_server.servicer.last_metadata)
     assert md.get("username") == "u"
     assert md.get("password") == "p"
@@ -219,15 +210,14 @@ def test_async_session_in_package_dunder_all():
 # Open bugs
 # ---------------------------------------------------------------------------
 
-def test_async_session_supports_async_context_manager(stub_server):
-    async def go():
-        async with AsyncSession(stub_server.target, insecure=True) as sess:
-            return await sess.capabilities()
+async def test_async_session_supports_async_context_manager(stub_server):
+    async with AsyncSession(stub_server.target, insecure=True) as sess:
+        cap = await sess.capabilities()
 
-    assert _run(go()).gnmi_version == STUB_GNMI_VERSION
+        assert cap.gnmi_version == STUB_GNMI_VERSION
 
 
-def test_async_session_propagates_rpc_error(stub_server):
+async def test_async_session_propagates_rpc_error(stub_server):
     """Native error propagation: AsyncSession surfaces grpc.aio.AioRpcError
     (a subclass of grpc.RpcError) so callers see the gRPC contract
     directly. Matches sync Session, which also propagates grpc.RpcError."""
@@ -240,30 +230,26 @@ def test_async_session_propagates_rpc_error(stub_server):
 
     stub_server.servicer.get_handler = boom
 
-    async def go():
+    with pytest.raises(grpc.RpcError) as ei:
         sess = AsyncSession(stub_server.target, insecure=True)
         try:
             await sess.get(["/x"])
         finally:
             await sess._channel.close(None)
-
-    with pytest.raises(grpc.RpcError) as ei:
-        _run(go())
     assert ei.value.code() == grpc.StatusCode.PERMISSION_DENIED
 
 
-def test_async_session_normalizes_non_string_metadata_values(stub_server):
-    async def go():
-        sess = AsyncSession(
-            stub_server.target,
-            insecure=True,
-            metadata={"trace_id": 42},
-        )
-        try:
-            await sess.capabilities()
-        finally:
-            await sess._channel.close(None)
+async def test_async_session_normalizes_non_string_metadata_values(stub_server):
 
-    _run(go())
+    sess = AsyncSession(
+        stub_server.target,
+        insecure=True,
+        metadata={"trace_id": 42},
+    )
+    try:
+        await sess.capabilities()
+    finally:
+        await sess._channel.close(None)
+
     md = dict(stub_server.servicer.last_metadata)
     assert md.get("trace_id") == "42"
