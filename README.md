@@ -27,13 +27,14 @@ uv run pytest
 ## CLI
 
 ```text
-gnmip [target] [capabilities|get|subscribe] [paths ...]
+gnmip [-t target] [capabilities|get|subscribe] [paths ...]
 ```
 
 Common flags:
 
 | flag | what it does |
 |------|--------------|
+| `-t TARGET` / `--target TARGET` | target host and port |
 | `--insecure` | skip TLS (plaintext gRPC) |
 | `--tls-ca PATH` | CA cert to validate the target |
 | `--tls-cert PATH` / `--tls-key PATH` | client cert / key (mTLS) |
@@ -56,12 +57,12 @@ Subscribe-only:
 Examples:
 
 ```bash
-gnmip --insecure -u admin localhost:6030 capabilities
-gnmip --insecure -u admin localhost:6030 get /system/config/hostname
-gnmip --insecure -u admin localhost:6030 subscribe /interfaces
+gnmip --insecure -u admin -t localhost:6030 capabilities
+gnmip --insecure -u admin -t localhost:6030 get /system/config/hostname
+gnmip --insecure -u admin -t localhost:6030 subscribe /interfaces
 
 # pipe to jq
-gnmip --insecure -u admin localhost:6030 subscribe /system | \
+gnmip --insecure -u admin -t localhost:6030 subscribe /system | \
   jq '{time: .time, path: (.prefix + .updates[].path), value: .updates[].value}'
 ```
 

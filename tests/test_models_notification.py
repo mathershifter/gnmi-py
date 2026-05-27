@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
 # Arista Networks, Inc. Confidential and Proprietary.
+
 import time
 from gnmi.models import Notification
-# from gnmi.models.path import PathDescriptor
 from gnmi.proto import gnmi_pb2 as pb
 
 def test_notification():
@@ -67,8 +67,27 @@ def test_notification():
         (
             Notification(
                 timestamp=now,
-                prefix="/interfaces",
+                prefix="",
                 updates=[],
+                deletes=[
+                    "/interfaces/interface[name=Ethernet1]",
+                ]
+            ),
+            pb.Notification(
+                timestamp=now,
+                prefix=pb.Path(),
+                delete=[
+                    pb.Path(elem=[
+                        pb.PathElem(name="interfaces", key={}),
+                        pb.PathElem(name="interface", key={"name": "Ethernet1"}),
+                    ])
+                ],
+            ),
+        ),
+        (
+            Notification(
+                timestamp=now,
+                prefix="/interfaces",
                 deletes=[
                     "interface[name=Ethernet1]",
                 ]
@@ -78,7 +97,6 @@ def test_notification():
                 prefix=pb.Path(elem=[
                     pb.PathElem(name="interfaces", key={}),
                 ]),
-                # update=[],
                 delete=[
                     pb.Path(elem=[
                         pb.PathElem(name="interface", key={"name": "Ethernet1"}),
@@ -90,6 +108,8 @@ def test_notification():
 
     for test in tests:
         notif, want = test
-        print(f"NOTIF: {notif.prefix} :: {want.prefix}")
+        assert Notification.decode(want).encode() == want, f"Decoded and re-encoded notification does not match expected"
+        assert Notification.decode(notif.encode()) == notif, f"Decoded and re-encoded notification does not match original"
+        assert Notification.decode(want) == notif 
         assert notif.encode() == want
-        assert Notification.decode(want) == notif
+        # assert Notification.decode(want) == notif

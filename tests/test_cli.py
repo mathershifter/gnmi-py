@@ -41,14 +41,14 @@ def test_top_level_help_lists_subcommands():
 
 
 def test_subscribe_help_documents_streaming_options():
-    result = CliRunner().invoke(cli, ["host:6030", "subscribe", "--help"])
+    result = CliRunner().invoke(cli, ["-t", "host:6030", "subscribe", "--help"])
     assert result.exit_code == 0
     for opt in ("--mode", "--submode", "--interval", "--heartbeat", "--qos"):
         assert opt in result.output
 
 
 def test_target_is_required():
-    result = CliRunner().invoke(cli, ["capabilities"])
+    result = CliRunner().invoke(cli, ["-t", "host:6030", "capabilities"])
     # Click rejects when target is missing — capabilities is treated as
     # the target and then "no such command" complains.
     assert result.exit_code != 0
@@ -59,7 +59,7 @@ def test_target_is_required():
 # ---------------------------------------------------------------------------
 
 def test_cli_capabilities_against_stub(stub_server):
-    result = CliRunner().invoke(cli, ["--insecure", stub_server.target, "capabilities"])
+    result = CliRunner().invoke(cli, ["--insecure", "-t", stub_server.target, "capabilities"])
     assert result.exit_code == 0, result.output
     assert "gNMI Version:" in result.output
     assert "openconfig-system" in result.output
@@ -67,7 +67,7 @@ def test_cli_capabilities_against_stub(stub_server):
 
 def test_cli_get_against_stub(stub_server):
     result = CliRunner().invoke(
-        cli, ["--json", "--insecure", stub_server.target, "get", "/system/config/hostname"]
+        cli, ["--json", "--insecure", "-t", stub_server.target, "get", "/system/config/hostname"]
     )
     assert result.exit_code == 0, result.output
     print(f"Result output: {result.output}")
@@ -77,7 +77,7 @@ def test_cli_get_against_stub(stub_server):
 
 def test_cli_subscribe_against_stub(stub_server):
     result = CliRunner().invoke(
-        cli, ["--json", "--insecure", stub_server.target, "subscribe", "--mode", "once", "/a"]
+        cli, ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "/a"]
     )
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.strip().splitlines()[0])
@@ -86,7 +86,7 @@ def test_cli_subscribe_against_stub(stub_server):
 
 def test_cli_username_metadata_propagates(stub_server):
     result = CliRunner().invoke(
-        cli, ["--json", "--insecure", "-u", "admin", "-p", "pw", stub_server.target,
+        cli, ["--json", "--insecure", "-u", "admin", "-p", "pw", "-t", stub_server.target,
               "capabilities"],
     )
     assert result.exit_code == 0, result.output
@@ -129,7 +129,7 @@ def test_rc_defaults_drive_cli_when_no_explicit_flag(stub_server):
     """`default_map` from the rc loader makes `--insecure` implicit."""
     result = CliRunner().invoke(
         cli,
-        [stub_server.target, "subscribe", "/a"],
+        ["-t", stub_server.target, "subscribe", "/a"],
         default_map={"format": "json", "insecure": True, "subscribe": {"mode": "once"}},
     )
     assert result.exit_code == 0, result.output
@@ -152,7 +152,7 @@ def test_config_file_toml_overrides_rc_defaults(stub_server, tmp_path):
     )
     result = CliRunner().invoke(
         cli,
-        ["--config", str(cfg), stub_server.target, "subscribe", "/a"],
+        ["--config", str(cfg), "-t", stub_server.target, "subscribe", "/a"],
         default_map={"format": "json","subscribe": {"mode": "stream"}},
     )
     assert result.exit_code == 0, result.output
@@ -169,7 +169,7 @@ def test_config_file_yaml_supported(stub_server, tmp_path):
     )
     result = CliRunner().invoke(
         cli,
-        ["--json", "--config", str(cfg), stub_server.target, "subscribe", "/a"],
+        ["--json", "--config", str(cfg), "-t", stub_server.target, "subscribe", "/a"],
     )
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.strip().splitlines()[0])
@@ -183,7 +183,7 @@ def test_cli_flag_overrides_config_file_and_rc(stub_server, tmp_path):
     cfg.write_text("insecure = false\n")
     result = CliRunner().invoke(
         cli,
-        ["--insecure", "--config", str(cfg), stub_server.target, "capabilities"],
+        ["--insecure", "--config", str(cfg), "-t", stub_server.target, "capabilities"],
         default_map={"insecure": False},
     )
     assert result.exit_code == 0, result.output

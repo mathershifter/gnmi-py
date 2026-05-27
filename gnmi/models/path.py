@@ -110,6 +110,8 @@ class Path(BaseModel[pb.Path]):
 
     def encode(self) -> pb.Path:
         elem = [e.encode() for e in self.elem]
+        if not self.origin and not self.target and len(elem) == 0:
+             return pb.Path()
         return pb.Path(elem=elem, origin=self.origin, target=self.target)
 
 
@@ -118,6 +120,10 @@ class Path(BaseModel[pb.Path]):
         p: list[PathElem] = []
         for elem in v.elem:
             p.append(PathElem.decode(elem))
+        
+        if not v.origin and not v.target:
+            return cls(elem=p)
+        
         return cls(p, v.origin, v.target)
 
 

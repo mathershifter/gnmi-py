@@ -165,7 +165,7 @@ def async_command(f):
 
 @click.group()
 @click.version_option(format_version(), prog_name="gnmip")
-@click.argument("target")
+@click.option("--target", "-t", default="", help="gNMI target address (host:port). Can also be set via the config file.")
 @click.option("-j", "--json", is_flag=True, default=False, help="output notifications as JSON, short for --format json")
 @click.option("--format", default="pretty", type=click.Choice(FORMATTERS), help="output format (json, yaml, etc.)")
 @click.option("--tls-ca", default="", type=click.Path(), help="certificate authority")
@@ -353,3 +353,11 @@ async def subscribe(
             if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
                 return
             raise
+
+
+@cli.command()
+@click.pass_context
+@async_command
+async def collector(ctx: click.Context) -> None:
+    """Start a gNMI collector that listens for incoming notifications."""
+    pass

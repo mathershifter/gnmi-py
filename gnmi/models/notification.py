@@ -21,7 +21,7 @@ class Notification(BaseModel[pb.Notification]):
     """
 
     timestamp: int
-    prefix: PathDescriptor = PathDescriptor(default="")
+    prefix: PathDescriptor = PathDescriptor(default=None)
     deletes: Paths = field(default=Paths())
     updates: Updates = field(default=Updates())
     atomic: bool = False
@@ -35,32 +35,36 @@ class Notification(BaseModel[pb.Notification]):
 
     @classmethod
     def decode(cls, v: pb.Notification) -> "Notification":
+        if v.HasField('prefix'):
+            prefix = Path.decode(v.prefix)
+        else:
+            prefix = None
 
         return cls(
             timestamp=v.timestamp,
-            prefix=Path.decode(v.prefix),
+            prefix=prefix,
             updates=[Update.decode(u) for u in v.update],
             deletes=[Path.decode(d) for d in v.delete],
         )
 
     def encode(self) -> pb.Notification:
-        pfx: pb.Path | None = None
         upds = []
         dlts = []
-
-        if self.prefix is not None and not self.prefix.is_empty():
-            if self.prefix is not None:
-                pfx = self.prefix.encode()
-
         if self.updates is not None:
             upds = [u.encode() for u in self.updates]
 
         if self.deletes is not None:
             dlts = [d.encode() for d in self.deletes]
-
-        return pb.Notification(
+        notif = pb.Notification(
             timestamp=self.timestamp,
-            prefix=pfx,
             update=upds,
             delete=dlts,
         )
+        
+        # don't set prefix at all if it is None
+        if not self.prefix is None:
+            notif.MergeFrom(pb.Notification(
+                prefix=self.prefix.encode()
+            ))
+
+        return notif
