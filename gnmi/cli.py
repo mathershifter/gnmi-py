@@ -31,7 +31,7 @@ from gnmi.models import Subscription
 from gnmi.models.path import Path
 from gnmi.models.target import target_factory
 from gnmi.outputs.pretty import PrettyCapabilities, PrettyNotification
-from gnmi.outputs.lines import StreamingNotification
+from gnmi.outputs.streams import StreamingNotification
 from gnmi.outputs.json import JsonNotification, JsonCapabilities
 from gnmi.tls import TLSConfig
 
@@ -294,6 +294,7 @@ async def get(ctx: click.Context, paths, encoding, prefix, prefix_target, get_ty
 @click.option("--aggregate", is_flag=True, default=False, help="allow aggregation")
 @click.option("--suppress", is_flag=True, default=False, help="suppress redundant updates")
 @click.option("--qos", type=int, default=0, show_default=True, help="DSCP marking")
+@click.option("--detail", is_flag=True, default=False, help="display detailed notification messages")
 @click.pass_context
 @async_command
 async def subscribe(
@@ -309,6 +310,7 @@ async def subscribe(
     aggregate,
     suppress,
     qos,
+    detail
 ) -> None:
     """Subscribe to updates for one or more paths."""
 
@@ -346,7 +348,10 @@ async def subscribe(
                 # PrettyNotification().send(resp.update)
                 
                 if format == "pretty":
-                    StreamingNotification().send(resp.update)
+                    if detail:
+                        PrettyNotification().send(resp.update)
+                    else:
+                        StreamingNotification().send(resp.update)
                 else:
                     JsonNotification().send(resp.update)
         except grpc.RpcError as e:

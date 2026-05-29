@@ -108,8 +108,8 @@ def test_notification():
 
     for test in tests:
         notif, want = test
-        assert Notification.decode(want).encode() == want, f"Decoded and re-encoded notification does not match expected"
-        assert Notification.decode(notif.encode()) == notif, f"Decoded and re-encoded notification does not match original"
+        assert Notification.decode(want).encode() == want, "Decoded and re-encoded notification does not match expected"
+        assert Notification.decode(notif.encode()) == notif, "Decoded and re-encoded notification does not match original"
         assert Notification.decode(want) == notif 
         assert notif.encode() == want
         # assert Notification.decode(want) == notif

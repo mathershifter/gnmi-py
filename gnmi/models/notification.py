@@ -62,7 +62,7 @@ class Notification(BaseModel[pb.Notification]):
         )
         
         # don't set prefix at all if it is None
-        if not self.prefix is None:
+        if self.prefix is not None:
             notif.MergeFrom(pb.Notification(
                 prefix=self.prefix.encode()
             ))
