@@ -30,9 +30,9 @@ from gnmi.async_session import AsyncSession
 from gnmi.models import Subscription
 from gnmi.models.path import Path
 from gnmi.models.target import target_factory
-from gnmi.outputs.pretty import PrettyCapabilities, PrettyNotification
-from gnmi.outputs.streams import StreamingNotification
-from gnmi.outputs.json import JsonNotification, JsonCapabilities
+from gnmi.formatters.pretty import PrettyCapabilities, PrettyNotification
+from gnmi.formatters.streams import StreamingNotification
+from gnmi.formatters.json import JsonNotification, JsonCapabilities
 from gnmi.tls import TLSConfig
 
 

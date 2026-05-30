@@ -2,11 +2,9 @@
 import json
 from gnmi.models.capabilities import CapabilityResponse
 from gnmi.models.notification import Notification
-from gnmi.outputs.output import Sinker
 
 
-
-class JsonNotification(Sinker):
+class JsonNotification:
     def send(self, data: Notification) -> None:
         target = str(data.prefix.target) if data.prefix and data.prefix.target else ""
         out = {
@@ -28,7 +26,7 @@ class JsonNotification(Sinker):
             })
         print(json.dumps(out))
 
-class JsonCapabilities(Sinker):
+class JsonCapabilities:
     def send(self, data: CapabilityResponse) -> None:
         print(json.dumps({
             "gnmi_version": data.gnmi_version,
