@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
-# Arista Networks, Inc. Confidential and Proprietary.
+
 
 from gnmi.proto import target_pb2 as pb
 from gnmi.models.target import Target, target_factory, _split_addr_port

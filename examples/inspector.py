@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
-# Arista Networks, Inc. Confidential and Proprietary.
+
 """
 Inspect the shape of a subscribe stream — prints a TSV of
 (path, model class, kind) tuples for every prefix element, update, and

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2025 Arista Networks, Inc.  All rights reserved.
-# Arista Networks, Inc. Confidential and Proprietary.
+
 
 """Round-trip and error-path coverage for the Subscribe models
 (AUDIT.md Testing #4, #10)."""
