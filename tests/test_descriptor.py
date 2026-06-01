@@ -3,9 +3,10 @@
 import enum
 from dataclasses import dataclass
 
-from gnmi.models.descriptor import Enum #EnumDescriptor, ListDescriptor
+from gnmi.models.descriptor import Enum  # EnumDescriptor, ListDescriptor
 
-def  test_enum_descriptor():
+
+def test_enum_descriptor():
     class TestEnum(enum.Enum):
         A = 0
         B = 1
@@ -15,7 +16,7 @@ def  test_enum_descriptor():
     class TestEnumDescriptor:
         value: Enum[TestEnum] = Enum(default=TestEnum.A)
 
-    t = TestEnumDescriptor(value='B')
+    t = TestEnumDescriptor(value="B")
     assert t.value == TestEnum.B
 
     t = TestEnumDescriptor(value=2)

@@ -9,9 +9,7 @@ from tests.conftest import GNMI_AUTH, GNMI_TARGET, requires_live_target
 
 
 def test_cap(target, is_insecure, tlsconfig):
-    response = capabilities(
-        target, insecure=is_insecure, tls=tlsconfig, auth=GNMI_AUTH
-    )
+    response = capabilities(target, insecure=is_insecure, tls=tlsconfig, auth=GNMI_AUTH)
 
     assert isinstance(response, CapabilityResponse), "Invalid response"
 
@@ -53,7 +51,8 @@ def test_subscribe(target, is_insecure, tlsconfig):
                 if path.startswith("/interfaces/interface"):
                     seen["/interfaces/interface"] = True
 
-            elif isinstance(u, Path): ...
+            elif isinstance(u, Path):
+                ...
                 # print(f"DELETED: {path}")
 
     assert "/system/processes/process" in seen.keys()
@@ -92,7 +91,7 @@ def test_set(target, is_insecure, tlsconfig, request):
 
     request.addfinalizer(_rollback)
 
-    updates: list[tuple[str, Any]]= [("/system/config/hostname", "minemeow")]
+    updates: list[tuple[str, Any]] = [("/system/config/hostname", "minemeow")]
     gen = update(
         target,
         updates=updates,

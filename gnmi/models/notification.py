@@ -34,7 +34,7 @@ class Notification(BaseModel[pb.Notification]):
 
     @classmethod
     def decode(cls, v: pb.Notification) -> "Notification":
-        if v.HasField('prefix'):
+        if v.HasField("prefix"):
             prefix = Path.decode(v.prefix)
         else:
             prefix = None
@@ -59,11 +59,9 @@ class Notification(BaseModel[pb.Notification]):
             update=upds,
             delete=dlts,
         )
-        
+
         # don't set prefix at all if it is None
         if self.prefix is not None:
-            notif.MergeFrom(pb.Notification(
-                prefix=self.prefix.encode()
-            ))
+            notif.MergeFrom(pb.Notification(prefix=self.prefix.encode()))
 
         return notif

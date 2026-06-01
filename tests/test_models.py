@@ -6,17 +6,19 @@ from gnmi.proto import gnmi_pb2 as pb
 
 from gnmi import models
 
+
 def test_subscription_list_mode():
     tests = [
         (
             models.SubscriptionListMode.from_str("STREAM"),
-            pb.SubscriptionList.Mode.STREAM
+            pb.SubscriptionList.Mode.STREAM,
         ),
     ]
 
     for t in tests:
         mode, want = t
         assert mode.value == want
+
 
 def test_subscription_list():
     tests = [
@@ -25,7 +27,9 @@ def test_subscription_list():
                 prefix=Path.from_str("interfaces"),
                 subscriptions=[
                     models.Subscription(
-                        path=Path.from_str("interface[name=Ethernet1/2/3]/state/counters"),
+                        path=Path.from_str(
+                            "interface[name=Ethernet1/2/3]/state/counters"
+                        ),
                         mode="on-change",
                         heartbeat_interval="1s",
                     ),
@@ -34,24 +38,26 @@ def test_subscription_list():
                 mode="stream",
             ),
             pb.SubscriptionList(
-                prefix=pb.Path(elem=[
-                    pb.PathElem(name="interfaces")
-                ]),
+                prefix=pb.Path(elem=[pb.PathElem(name="interfaces")]),
                 subscription=[
                     pb.Subscription(
-                        path = pb.Path(elem=[
-                            pb.PathElem(name="interface", key={"name": "Ethernet1/2/3"}),
-                            pb.PathElem(name="state"),
-                            pb.PathElem(name="counters"),
-                        ]),
-                        mode = pb.SubscriptionMode.ON_CHANGE,
-                        heartbeat_interval = 1_000_000_000
+                        path=pb.Path(
+                            elem=[
+                                pb.PathElem(
+                                    name="interface", key={"name": "Ethernet1/2/3"}
+                                ),
+                                pb.PathElem(name="state"),
+                                pb.PathElem(name="counters"),
+                            ]
+                        ),
+                        mode=pb.SubscriptionMode.ON_CHANGE,
+                        heartbeat_interval=1_000_000_000,
                     )
                 ],
                 encoding=pb.Encoding.JSON,
                 mode=pb.SubscriptionList.Mode.STREAM,
                 qos=pb.QOSMarking(marking=0),
-            )
+            ),
         ),
     ]
 
@@ -59,24 +65,30 @@ def test_subscription_list():
         sub, want = t
         assert sub.encode() == want
 
+
 def test_subscription():
     tests = [
         (
             models.Subscription(
-                path=Path.from_str("openconfig:interfaces/interface[name=Ethernet1/2/3]/state/counters"),
+                path=Path.from_str(
+                    "openconfig:interfaces/interface[name=Ethernet1/2/3]/state/counters"
+                ),
                 mode="on-change",
                 sample_interval="1s",
             ),
             pb.Subscription(
-                path = pb.Path(elem=[
-                    pb.PathElem(name="interfaces"),
-                    pb.PathElem(name="interface", key={"name": "Ethernet1/2/3"}),
-                    pb.PathElem(name="state"),
-                    pb.PathElem(name="counters"),
-                ], origin="openconfig"),
-                mode = pb.SubscriptionMode.ON_CHANGE,
-                sample_interval=1_000_000_000
-            )
+                path=pb.Path(
+                    elem=[
+                        pb.PathElem(name="interfaces"),
+                        pb.PathElem(name="interface", key={"name": "Ethernet1/2/3"}),
+                        pb.PathElem(name="state"),
+                        pb.PathElem(name="counters"),
+                    ],
+                    origin="openconfig",
+                ),
+                mode=pb.SubscriptionMode.ON_CHANGE,
+                sample_interval=1_000_000_000,
+            ),
         )
     ]
 

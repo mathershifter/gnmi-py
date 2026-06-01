@@ -4,6 +4,7 @@ from gnmi.util import datetime_from_int64
 from rich.console import Console
 from rich.markup import escape
 
+
 class StreamingNotification:
     def send(self, m: Notification) -> None:
         console = Console()
@@ -13,10 +14,13 @@ class StreamingNotification:
 
         for update in m.updates:
             path = escape(str(prefix / update.path))
-            console.print(f"{timestamp} {target} [blue]UPDATE[/blue] {path} {update.value.value}")
+            console.print(
+                f"{timestamp} {target} [blue]UPDATE[/blue] {path} {update.value.value}"
+            )
         for delete in m.deletes:
             path = escape(str(prefix / delete))
             console.print(f"{timestamp} {target} [red]DELETE[/red] {path}")
+
 
 class JsonLinesNotification:
     def send(self, data: Notification) -> None:

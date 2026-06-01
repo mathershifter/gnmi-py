@@ -12,6 +12,7 @@ from gnmi.models.path import Path, PathDescriptor
 from gnmi.models.descriptor import Enum
 from gnmi.models import Encoding, ModelData
 
+
 class SubscriptionListMode(enum.Enum):
     STREAM = 0
     ONCE = 1
@@ -28,6 +29,7 @@ class SubscriptionListMode(enum.Enum):
             return cls(cls.POLL)
         raise ValueError(f"invalid subscription-list mode: {s}")
 
+
 class Subscriptions:
     def __init__(self):
         self._default: Sequence[Subscription] = []
@@ -40,7 +42,9 @@ class Subscriptions:
             return []
         return getattr(instance, self.name, [])
 
-    def __set__(self, instance, value: Sequence[Subscription | pb.Subscription | Path | str]):
+    def __set__(
+        self, instance, value: Sequence[Subscription | pb.Subscription | Path | str]
+    ):
         # dataclass(field(default=Subscriptions())) hands the descriptor
         # instance back to __set__ on default construction — leave the
         # backing attribute unset so __get__ returns the empty default.
@@ -57,6 +61,7 @@ class Subscriptions:
             elif isinstance(s, (str, bytes)):
                 subs.append(Subscription(path=str(s)))
         setattr(instance, self.name, subs)
+
 
 @dataclass
 class SubscriptionList(BaseModel[pb.SubscriptionList]):
@@ -82,10 +87,10 @@ class SubscriptionList(BaseModel[pb.SubscriptionList]):
         models = None
         if self.prefix is not None:
             prefix = self.prefix.encode()
-        
+
         if self.use_models is not None:
-            models = [ModelData.encode(m) for m in self.use_models ]
-        
+            models = [ModelData.encode(m) for m in self.use_models]
+
         return pb.SubscriptionList(
             prefix=prefix,
             subscription=[s.encode() for s in self.subscriptions],

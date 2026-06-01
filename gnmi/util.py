@@ -6,33 +6,39 @@ import os
 import re
 
 import typing as t
-import gnmi.proto.gnmi_pb2 as pb # type: ignore
+import gnmi.proto.gnmi_pb2 as pb  # type: ignore
+
 
 def enable_grpc_debuging():
     os.environ["GRPC_TRACE"] = "all"
     os.environ["GRPC_VERBOSITY"] = "DEBUG"
 
+
 def constantize(s: str) -> str:
     return s.replace("-", "_").upper()
+
 
 def get_gnmi_constant(name: str) -> t.Any:
     mode = getattr(pb, constantize(name))
     return mode
 
+
 def get_datatype(name: str) -> pb.GetRequest.DataType:
     dt: pb.GetRequest.DataType = getattr(pb.GetRequest, constantize(name))
     return dt
+
 
 def get_subscription_list_mode(name: str) -> pb.SubscriptionList.Mode:
     m: pb.SubscriptionList.Mode = getattr(pb.SubscriptionList, constantize(name))
     return m
 
+
 _DURATION_MULTIPLIERS = {
     "ns": 1,
     "us": 1_000,
     "ms": 1_000_000,
-    "s":  1_000_000_000,
-    "m":  60_000_000_000,
+    "s": 1_000_000_000,
+    "m": 60_000_000_000,
 }
 # "ms" must precede "m"/"s" so the alternation matches the longer unit first.
 _DURATION_CHUNK = re.compile(r"(\d+)(ns|us|ms|s|m)?")
@@ -67,10 +73,12 @@ def parse_duration(duration: str) -> int:
 
     return total
 
+
 def prepare_metadata(md: t.Optional[dict[str, t.Any]]) -> list[tuple[str, str]]:
     if md is None:
         return []
     return [(k, str(v)) for k, v in md.items()]
+
 
 def escape_string(string: str, escape: str) -> str:
     result = ""
@@ -80,12 +88,13 @@ def escape_string(string: str, escape: str) -> str:
         result += character
     return result
 
+
 def datetime_from_int64(timestamp: int) -> datetime.datetime:
     return datetime.datetime.fromtimestamp(timestamp // 1000000000)
 
 
 def oneof(*args) -> int:
-    the=[]
+    the = []
 
     for i, item in enumerate(args):
         if item:

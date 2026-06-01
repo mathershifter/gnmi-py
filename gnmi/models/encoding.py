@@ -17,8 +17,10 @@ class Encoding(enum.Enum):
     def from_str(cls, v: str) -> "Encoding":
         return cls[constantize(v)]
 
+
 class EncodingDescriptor:
     _default = Encoding.JSON
+
     def __set_name__(self, owner, name):
         self.name = "_" + name
 
@@ -33,5 +35,5 @@ class EncodingDescriptor:
         if isinstance(value, str):
             enc = Encoding[value.upper()]
         elif isinstance(value, int):
-            enc = Encoding(value)  
+            enc = Encoding(value)
         setattr(instance, self.name, enc)

@@ -23,6 +23,7 @@ def test_parse_duration():
 # escape_string (AUDIT.md Testing Nit)
 # ---------------------------------------------------------------------------
 
+
 def test_escape_string_passthrough_when_no_metachars():
     assert escape_string("plain", "/") == "plain"
 
@@ -46,6 +47,7 @@ def test_escape_string_supports_multi_char_escape_set():
 # ---------------------------------------------------------------------------
 # oneof error paths (AUDIT.md Testing #6)
 # ---------------------------------------------------------------------------
+
 
 def test_oneof_zero_set_raises():
     with pytest.raises(ValueError):

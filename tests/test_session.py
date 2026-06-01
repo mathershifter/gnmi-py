@@ -19,16 +19,17 @@ GNMI_PATHS = os.environ.get("GNMI_PATHS", "/system/config;/system/memory/state")
 def paths():
     return GNMI_PATHS.split(";")
 
+
 @pytest.fixture()
 def session(target, tlsconfig, is_insecure):
     metadata = {"username": GNMI_USER, "password": GNMI_PASS}
-    return Session(
-        target, insecure=is_insecure, tls=tlsconfig, metadata=metadata
-    )
+    return Session(target, insecure=is_insecure, tls=tlsconfig, metadata=metadata)
+
 
 def test_cap(session):
     resp = session.capabilities()
     assert len(resp.supported_encodings)
+
 
 def test_get(session, paths):
     resp = session.get(paths)
@@ -38,6 +39,7 @@ def test_get(session, paths):
             assert type(update) is Update
             assert type(update.path) is Path
             assert hasattr(update, "value")
+
 
 @requires_live_target
 def test_sub(session, paths):
@@ -49,10 +51,12 @@ def test_sub(session, paths):
                 pass
     assert ei.value.code() == grpc.StatusCode.DEADLINE_EXCEEDED
 
+
 def test_sub_sync_response(session, paths):
     for resp in session.subscribe(paths, mode="once"):
         if resp.sync_response:
             break
+
 
 @requires_live_target
 def test_set(session):
@@ -87,4 +91,3 @@ def test_set(session):
     rsps = session.set(updates=updates)
     assert rsps.responses[0].op.name == "UPDATE"
     assert _get_hostname() == hostname_
-

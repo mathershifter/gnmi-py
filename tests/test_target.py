@@ -4,6 +4,7 @@
 from gnmi.proto import target_pb2 as pb
 from gnmi.models.target import Target, target_factory, _split_addr_port
 
+
 def test_target_factory():
     tests: list[tuple[Target, pb.Target, bool]] = [
         # (
@@ -28,38 +29,32 @@ def test_target_factory():
         # ),
         (
             target_factory("localhost:6030"),
-            pb.Target(addresses=[
-                "localhost:6030"
-            ]),
-            True
+            pb.Target(addresses=["localhost:6030"]),
+            True,
         ),
-        
         (
             target_factory("cr-1.internal.corp.io:6030"),
             pb.Target(addresses=["cr-1.internal.corp.io:6030"]),
-            True
+            True,
         ),
         (
             target_factory("127.0.0.1:6030"),
             pb.Target(addresses=["127.0.0.1:6030"]),
-            True
+            True,
         ),
-        (
-            target_factory("[::1]:6030"),
-            pb.Target(addresses=["[::1]:6030"]),
-            True
-        ),
+        (target_factory("[::1]:6030"), pb.Target(addresses=["[::1]:6030"]), True),
         (
             target_factory("[dead:beef::1]:6030"),
             pb.Target(addresses=["[dead:beef::1]:6030"]),
-            True
-        )
+            True,
+        ),
     ]
 
     for test in tests:
         have, want, ok = test
         if ok:
             assert have.encode() == want
+
 
 def test_split_addr_port():
     tests = [
@@ -93,4 +88,3 @@ def test_split_addr_port():
         t, want = test
         got = _split_addr_port(t)
         assert got == want, f"split_addr_port({t!r}) == {got!r}, want {want!r}"
-        

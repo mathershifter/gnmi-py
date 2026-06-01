@@ -8,6 +8,7 @@ Demonstrates:
   * capabilities, get, set (update), once-mode subscribe
   * native error propagation (``grpc.RpcError`` with ``.code()``)
 """
+
 import argparse
 
 import grpc
@@ -39,7 +40,9 @@ def main():
     metadata = {"username": args.username, "password": args.password}
     tls = build_tls(args)
 
-    with Session(args.target, metadata=metadata, insecure=args.insecure, tls=tls) as sess:
+    with Session(
+        args.target, metadata=metadata, insecure=args.insecure, tls=tls
+    ) as sess:
         caps = sess.capabilities()
         print(f"gNMI version: {caps.gnmi_version}")
         print(f"Encodings: {[e.name for e in caps.supported_encodings]}\n")

@@ -1,8 +1,8 @@
 import pytest
 import time
 import json
-import gnmi.proto.gnmi_pb2 as pb # type: ignore
-from google.protobuf import any_pb2 # type: ignore
+import gnmi.proto.gnmi_pb2 as pb  # type: ignore
+from google.protobuf import any_pb2  # type: ignore
 from gnmi.util import escape_string
 from gnmi.models import Path
 
@@ -33,6 +33,7 @@ def gnmi_capability_response():
 
 any_ = any_pb2.Any()
 any_.Pack(pb.TypedValue(string_val="testany"))
+
 
 @pytest.fixture(
     params=[
@@ -117,6 +118,7 @@ def test_gnmi_path():
         # [(e.name, e.key) for e in pobj.elem]
 
         assert path == pstr
+
 
 # def test_gnmi_update_fromkeyval():
 #     upd = Update_.from_keyval(("/path/to/val", "hello"))

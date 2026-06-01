@@ -14,6 +14,7 @@ enum-name strings (so GetRequest/UpdateResult encode round-trips), and the
 DataType factory referenced in #5 no longer exists in the current
 descriptor implementation.
 """
+
 from __future__ import annotations
 
 import signal
@@ -43,6 +44,7 @@ from gnmi.util import escape_string, oneof, parse_duration
 # The remaining contract is "validation must actually happen and a failure
 # must surface." These two tests lock that in.
 
+
 def test_session_get_server_cert_invokes_handshake():
     from gnmi import session as session_mod
     from gnmi.session import Session, TLSConfig
@@ -54,15 +56,20 @@ def test_session_get_server_cert_invokes_handshake():
         get_server_cert=True,
     )
 
-    with mock.patch.object(
-        TLSConfig, "context", new_callable=mock.PropertyMock,
-        return_value=mock.sentinel.ctx,
-    ), mock.patch.object(
-        session_mod, "get_server_certificate", return_value={"subject": ()}
-    ) as fake_fetch, mock.patch.object(
-        session_mod, "ssl_channel_credentials", return_value=mock.sentinel.creds
-    ), mock.patch.object(
-        session_mod, "secure_channel", return_value=mock.MagicMock()
+    with (
+        mock.patch.object(
+            TLSConfig,
+            "context",
+            new_callable=mock.PropertyMock,
+            return_value=mock.sentinel.ctx,
+        ),
+        mock.patch.object(
+            session_mod, "get_server_certificate", return_value={"subject": ()}
+        ) as fake_fetch,
+        mock.patch.object(
+            session_mod, "ssl_channel_credentials", return_value=mock.sentinel.creds
+        ),
+        mock.patch.object(session_mod, "secure_channel", return_value=mock.MagicMock()),
     ):
         Session("localhost:6030", tls=tls)
 
@@ -91,15 +98,19 @@ def test_session_get_server_cert_propagates_validation_failure():
         get_server_cert=True,
     )
 
-    with mock.patch.object(
-        TLSConfig, "context", new_callable=mock.PropertyMock,
-        return_value=mock.sentinel.ctx,
-    ), mock.patch.object(
-        session_mod,
-        "get_server_certificate",
-        side_effect=ssl.SSLCertVerificationError("validation failed"),
-    ), mock.patch.object(
-        session_mod, "secure_channel", return_value=mock.MagicMock()
+    with (
+        mock.patch.object(
+            TLSConfig,
+            "context",
+            new_callable=mock.PropertyMock,
+            return_value=mock.sentinel.ctx,
+        ),
+        mock.patch.object(
+            session_mod,
+            "get_server_certificate",
+            side_effect=ssl.SSLCertVerificationError("validation failed"),
+        ),
+        mock.patch.object(session_mod, "secure_channel", return_value=mock.MagicMock()),
     ):
         with pytest.raises(ssl.SSLCertVerificationError):
             Session("localhost:6030", tls=tls)
@@ -111,6 +122,7 @@ def test_session_get_server_cert_propagates_validation_failure():
 
 # Bug #6 fixed: SubscribeRequest.decode now honours v.subscribe and v.poll.
 # The two round-trip tests below act as regression guards.
+
 
 def test_subscribe_request_round_trip_preserves_subscribe():
     orig = SubscribeRequest(
@@ -131,6 +143,7 @@ def test_subscribe_request_round_trip_preserves_poll():
 # ---------------------------------------------------------------------------
 # Critical bug #7 — api.subscribe() silently swallows GrpcDeadlineExceeded
 # ---------------------------------------------------------------------------
+
 
 # @pytest.mark.xfail(
 #     strict=True,
@@ -167,6 +180,7 @@ def test_subscribe_propagates_deadline_exceeded():
 # Critical bug #8 — oneof() rejects legitimate `False`
 # ---------------------------------------------------------------------------
 
+
 # @pytest.mark.xfail(
 #     strict=True,
 #     reason="oneof() (util.py:86) uses `is not None`, so `False` is counted "
@@ -193,6 +207,7 @@ def test_oneof_treats_false_as_unset():
 # Important bug #9 — Value.encode mis-handles LEAFLIST_VAL of primitives
 # ---------------------------------------------------------------------------
 
+
 # @pytest.mark.xfail(
 #     strict=True,
 #     reason="value.py:155-159 calls .encode() on raw list elements; ints/strs "
@@ -208,6 +223,7 @@ def test_value_leaflist_of_ints_encodes():
 # Important bug #10 — Value.encode double-encodes bytes for ANY_VAL
 # ---------------------------------------------------------------------------
 
+
 # @pytest.mark.xfail(
 #     strict=True,
 #     reason="value.py:151 wraps bytes with `str(self.val).encode()` -> b\"b'x'\". "
@@ -222,6 +238,7 @@ def test_value_any_val_preserves_bytes():
 # ---------------------------------------------------------------------------
 # Important bug #11 — Session leaks gRPC channel (no close / context-manager)
 # ---------------------------------------------------------------------------
+
 
 # @pytest.mark.xfail(
 #     strict=True,
@@ -240,6 +257,7 @@ def test_session_supports_close_or_context_manager():
 # ---------------------------------------------------------------------------
 # Important bug #12 — parse_duration mishandles zero and compound durations
 # ---------------------------------------------------------------------------
+
 
 def test_parse_duration_zero_seconds():
     # "0s" should round-trip cleanly to 0 ns. The current implementation
@@ -279,6 +297,7 @@ def test_parse_duration_bare_number_uses_default_unit():
 # Important bug #13 — update_list_factory silently drops non-list sequences
 # ---------------------------------------------------------------------------
 
+
 # @pytest.mark.xfail(
 #     strict=True,
 #     reason="update_list_factory's signature is Sequence[UpdateItem_] but the "
@@ -293,6 +312,7 @@ def test_update_list_factory_accepts_tuple_sequence():
 # ---------------------------------------------------------------------------
 # Important bug #14 — Subscriptions descriptor silently drops Path inputs
 # ---------------------------------------------------------------------------
+
 
 # @pytest.mark.xfail(
 #     strict=True,
@@ -340,12 +360,14 @@ def test_notification_constructs_with_no_args():
 # Important bug #15 — gnmi.entry installs SIGINT handler at import time
 # ---------------------------------------------------------------------------
 
+
 def test_importing_entry_does_not_change_sigint_handler():
     # Force a clean re-import so we can compare before/after.
     sys.modules.pop("gnmi.entry", None)
     before = signal.getsignal(signal.SIGINT)
     try:
         import gnmi.entry  # noqa: F401
+
         after = signal.getsignal(signal.SIGINT)
         assert after is before
     finally:
@@ -361,6 +383,7 @@ def test_importing_entry_does_not_change_sigint_handler():
 # raw field, not an idempotent transform. The real contract is "Path
 # stringify-then-parse round-trips losslessly even when names contain
 # escape-significant characters." This guards that.)
+
 
 def test_path_string_round_trip_preserves_backslash_in_name():
     from gnmi.models.path import Path, PathElem

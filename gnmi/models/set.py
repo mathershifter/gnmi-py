@@ -8,8 +8,9 @@ from gnmi.proto import gnmi_ext_pb2 as ext_pb2
 from gnmi.models.model import BaseModel
 from gnmi.models.update import Update
 from gnmi.models.update_result import UpdateResult
-from gnmi.models.error import  Error
+from gnmi.models.error import Error
 from gnmi.models.update import Updates
+
 
 @dataclass
 class SetRequest(BaseModel[pb.SetRequest]):
@@ -19,8 +20,6 @@ class SetRequest(BaseModel[pb.SetRequest]):
     updates: Updates = field(default=Updates())
     union_replacements: Updates = field(default=Updates())
     extensions: list[ext_pb2.Extension] = field(default_factory=list)
-
-
 
     def encode(self) -> pb.SetRequest:
         pfx = None
@@ -50,7 +49,7 @@ class SetRequest(BaseModel[pb.SetRequest]):
             update=upds,
             replace=reps,
             union_replace=ureps,
-            extension=self.extensions
+            extension=self.extensions,
         )
 
     @classmethod
@@ -61,7 +60,7 @@ class SetRequest(BaseModel[pb.SetRequest]):
             updates=[Update.decode(u) for u in v.update],
             replacements=[Update.decode(r) for r in v.replace],
             union_replacements=[Update.decode(ur) for ur in v.union_replace],
-            extensions=list(v.extension)
+            extensions=list(v.extension),
         )
 
 
@@ -78,7 +77,9 @@ class SetResponse(BaseModel[pb.SetResponse]):
         return path_factory(path)
 
     @staticmethod
-    def responses_factory(responses: list[UpdateResult | pb.UpdateResult]) -> list[UpdateResult]:
+    def responses_factory(
+        responses: list[UpdateResult | pb.UpdateResult],
+    ) -> list[UpdateResult]:
         rsps = []
         for r in responses:
             if isinstance(r, UpdateResult):
@@ -87,7 +88,6 @@ class SetResponse(BaseModel[pb.SetResponse]):
                 rsps.append(UpdateResult.decode(r))
 
         return rsps
-
 
     def encode(self) -> pb.SetResponse:
         pfx = None
@@ -107,7 +107,7 @@ class SetResponse(BaseModel[pb.SetResponse]):
             message=msg,
             response=rsps,
             timestamp=self.timestamp,
-            extension=self.extensions
+            extension=self.extensions,
         )
 
     @classmethod
@@ -116,12 +116,11 @@ class SetResponse(BaseModel[pb.SetResponse]):
 
         if v.message.code != 0:
             msg = Error.decode(v.message)
-        
+
         return cls(
             prefix=Path.decode(v.prefix),
             responses=[UpdateResult.decode(u) for u in v.response],
             message=msg,
             timestamp=v.timestamp,
             extensions=list(v.extension),
-
         )

@@ -9,6 +9,7 @@ from gnmi.models.encoding import Encoding
 from gnmi.models.model_data import ModelData
 from gnmi.util import get_gnmi_constant
 
+
 @dataclass
 class CapabilityRequest(BaseModel[pb.CapabilityRequest]):
     extension: list[ext_pb2.Extension] = field(default_factory=list)
@@ -24,6 +25,7 @@ class CapabilityRequest(BaseModel[pb.CapabilityRequest]):
             extension=list(v.extension),
         )
 
+
 @dataclass
 class CapabilityResponse(BaseModel[pb.CapabilityResponse]):
     supported_models: list[ModelData]
@@ -33,7 +35,9 @@ class CapabilityResponse(BaseModel[pb.CapabilityResponse]):
     def encode(self) -> pb.CapabilityResponse:
         return pb.CapabilityResponse(
             supported_models=[m.encode() for m in self.supported_models],
-            supported_encodings=[get_gnmi_constant(e.name) for e in self.supported_encodings],
+            supported_encodings=[
+                get_gnmi_constant(e.name) for e in self.supported_encodings
+            ],
             gNMI_version=self.gnmi_version,
         )
 
@@ -43,5 +47,5 @@ class CapabilityResponse(BaseModel[pb.CapabilityResponse]):
         return CapabilityResponse(
             supported_models=[ModelData.decode(m) for m in v.supported_models],
             supported_encodings=[Encoding(e) for e in v.supported_encodings],
-            gnmi_version=v.gNMI_version
+            gnmi_version=v.gNMI_version,
         )

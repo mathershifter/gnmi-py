@@ -5,6 +5,7 @@ import datetime
 from typing import Generic, TypeVar
 from gnmi.util import parse_duration
 
+
 class Duration:
     def __init__(self, *, default: int = 0):
         self._default = default
@@ -27,19 +28,19 @@ class Duration:
 
 
 E = TypeVar("E", bound=enum.Enum)
+
+
 class Enum(Generic[E]):
     def __init__(self, *, default: E):
         self._default: E = default
 
-    def __set_name__(self, owner, name):\
+    def __set_name__(self, owner, name):
         self._name = "_" + name
-
 
     def __get__(self, obj, typ) -> E:
         if obj is None:
             return self._default
         return getattr(obj, self._name, self._default)
-
 
     def __set__(self, obj, value: str | int | E):
         cls = getattr(obj, self._name, self._default).__class__

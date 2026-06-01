@@ -11,6 +11,7 @@ from gnmi.proto import gnmi_pb2 as pb
 
 from gnmi.models.value import ValueType, Value, Decimal64
 
+
 def test_decimal():
     with pytest.warns(DeprecationWarning):
         tests = [
@@ -23,18 +24,18 @@ def test_decimal():
             #     pb.Decimal64(digits=314159265359, precision=11),
             # ),
             (
-                Decimal((0, (3,1,4,1,5,9,2,6,5,3,5,9), -11)),
+                Decimal((0, (3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 9), -11)),
                 pb.Decimal64(digits=314159265359, precision=11),
-            )
+            ),
         ]
 
-    
         for test in tests:
             have, want = test
             d = Decimal64(have)
             assert d.precision == want.precision
             assert d.digits == want.digits
             assert d.encode() == want
+
 
 def test_val():
     tests = [
@@ -65,10 +66,9 @@ def test_val():
         (
             (1000, ValueType.UINT_VAL),
             pb.TypedValue(uint_val=1000),
-        )
+        ),
     ]
 
     for test in tests:
         have, want = test
         assert Value(*have).encode() == want
-

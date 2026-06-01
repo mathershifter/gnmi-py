@@ -12,25 +12,24 @@ from gnmi.models.target import TargetLike
 
 __all__ = ["capabilities", "delete", "get", "replace", "subscribe", "update"]
 
-def _metadata(
-    auth: BasicAuth = ("", "")
-) -> dict[str, str]:
+
+def _metadata(auth: BasicAuth = ("", "")) -> dict[str, str]:
     metadata: dict[str, str] = {}
-    
+
     username, password = auth
     if username:
         metadata = {"username": username, "password": password or ""}
 
     return metadata
 
-def _grpc_options(
-    override: str = ""
-) -> dict:
+
+def _grpc_options(override: str = "") -> dict:
     grpc_options: dict = {}
     if override:
         grpc_options["server_host_override"] = override
 
     return grpc_options
+
 
 def capabilities(
     target: str,
@@ -58,8 +57,15 @@ def capabilities(
     :type override: str
     """
 
-    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    with Session(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         return sess.capabilities()
+
 
 async def acapabilities(
     target: TargetLike,
@@ -88,8 +94,15 @@ async def acapabilities(
     :type override: str
     """
 
-    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
-        return await sess.capabilities()  
+    async with AsyncSession(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
+        return await sess.capabilities()
+
 
 def get(
     target: TargetLike,
@@ -100,7 +113,7 @@ def get(
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
     tls: TLSConfig | None = None,
-    override: str = ""
+    override: str = "",
 ) -> Iterable[Notification]:
     """
     Get path(s) from target
@@ -135,15 +148,18 @@ def get(
     :type override: str
 
     """
-    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
-        rsp = sess.get(
-            paths,
-            prefix=prefix,
-            encoding=encoding,
-            data_type=data_type)
+    with Session(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
+        rsp = sess.get(paths, prefix=prefix, encoding=encoding, data_type=data_type)
 
         for notif in rsp.notifications:
             yield notif
+
 
 async def aget(
     target: TargetLike,
@@ -154,7 +170,7 @@ async def aget(
     auth: BasicAuth = ("", ""),
     insecure: bool = False,
     tls: TLSConfig | None = None,
-    override: str = ""
+    override: str = "",
 ) -> AsyncIterable[Notification]:
     """
     Async get path(s) from target
@@ -170,15 +186,20 @@ async def aget(
         ...     for path in n.deletes:
         ...         print(str(path))
     """
-    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    async with AsyncSession(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         rsp = await sess.get(
-            paths,
-            prefix=prefix,
-            encoding=encoding,
-            data_type=data_type)
+            paths, prefix=prefix, encoding=encoding, data_type=data_type
+        )
 
         for notif in rsp.notifications:
             yield notif
+
 
 def subscribe(
     target: TargetLike,
@@ -250,27 +271,38 @@ def subscribe(
     :param override: override hostname
     :type override: str
     """
-    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    with Session(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         subs = []
         for p in paths:
-            subs.append(Subscription(
-                path=p,
-                mode=submode,
-            sample_interval=interval,
-            heartbeat_interval=heartbeat,
-            suppress_redundant=suppress,
-        ))
-    
-        for resp in sess.subscribe(subs,
-                                prefix=prefix,
-                                encoding=encoding,
-                                mode=mode,
-                                qos=qos,
-                                aggregate=aggregate,
-                                timeout=timeout):
+            subs.append(
+                Subscription(
+                    path=p,
+                    mode=submode,
+                    sample_interval=interval,
+                    heartbeat_interval=heartbeat,
+                    suppress_redundant=suppress,
+                )
+            )
+
+        for resp in sess.subscribe(
+            subs,
+            prefix=prefix,
+            encoding=encoding,
+            mode=mode,
+            qos=qos,
+            aggregate=aggregate,
+            timeout=timeout,
+        ):
             if resp.sync_response:
                 continue
             yield resp.update
+
 
 async def asubscribe(
     target: TargetLike,
@@ -303,27 +335,38 @@ async def asubscribe(
         ...     for path in n.deletes:
         ...         print(str(path))
     """
-    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    async with AsyncSession(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         subs = []
         for p in paths:
-            subs.append(Subscription(
-                path=p,
-                mode=submode,
-            sample_interval=interval,
-            heartbeat_interval=heartbeat,
-            suppress_redundant=suppress,
-        ))
-    
-        async for resp in sess.subscribe(subs,
-                                prefix=prefix,
-                                encoding=encoding,
-                                mode=mode,
-                                qos=qos,
-                                aggregate=aggregate,
-                                timeout=timeout):
+            subs.append(
+                Subscription(
+                    path=p,
+                    mode=submode,
+                    sample_interval=interval,
+                    heartbeat_interval=heartbeat,
+                    suppress_redundant=suppress,
+                )
+            )
+
+        async for resp in sess.subscribe(
+            subs,
+            prefix=prefix,
+            encoding=encoding,
+            mode=mode,
+            qos=qos,
+            aggregate=aggregate,
+            timeout=timeout,
+        ):
             if resp.sync_response:
                 continue
             yield resp.update
+
 
 def delete(
     target: TargetLike,
@@ -358,8 +401,15 @@ def delete(
     :type override: str
     """
 
-    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    with Session(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         return sess.set(deletes=paths, prefix=prefix)
+
 
 async def adelete(
     target: TargetLike,
@@ -395,8 +445,15 @@ async def adelete(
     :type override: str
     """
 
-    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    async with AsyncSession(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         return await sess.set(deletes=paths, prefix=prefix)
+
 
 def replace(
     target: TargetLike,
@@ -432,8 +489,15 @@ def replace(
     :param override: override hostname
     :type override: str
     """
-    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    with Session(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         return sess.set(replacements=replacements, prefix=prefix)
+
 
 async def areplace(
     target: TargetLike,
@@ -455,8 +519,15 @@ async def areplace(
         ...     auth=("admin", "p4ssw0rd")
         ... ))
     """
-    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    async with AsyncSession(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         return await sess.set(replacements=replacements, prefix=prefix)
+
 
 def update(
     target: TargetLike,
@@ -491,8 +562,15 @@ def update(
     :param override: override hostname
     :type override: str
     """
-    with Session(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    with Session(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         return sess.set(updates=updates, prefix=prefix)
+
 
 async def aupdate(
     target: TargetLike,
@@ -528,5 +606,11 @@ async def aupdate(
     :param override: override hostname
     :type override: str
     """
-    async with AsyncSession(target, metadata=_metadata(auth), insecure=insecure, tls=tls, grpc_options=_grpc_options(override)) as sess:
+    async with AsyncSession(
+        target,
+        metadata=_metadata(auth),
+        insecure=insecure,
+        tls=tls,
+        grpc_options=_grpc_options(override),
+    ) as sess:
         return await sess.set(updates=updates, prefix=prefix)

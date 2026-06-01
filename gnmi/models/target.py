@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from gnmi.models.model import BaseModel
 from gnmi.proto import target_pb2 as pb
 
+
 @dataclass
 class Target(BaseModel[pb.Target]):
     hostaddr: str
@@ -38,8 +39,9 @@ class Target(BaseModel[pb.Target]):
             ip = ipaddress.ip_address(self.hostaddr)
             return ip.version == 6
         except ValueError:
-            pass 
+            pass
         return False
+
     @property
     def address(self) -> str:
         if self.port != 0:
@@ -47,7 +49,9 @@ class Target(BaseModel[pb.Target]):
         else:
             raise ValueError(f"Invalid target address, missing port: {self.hostaddr}")
 
+
 TargetLike: TypeAlias = Target | pb.Target | str | tuple[str, int]
+
 
 class TargetDescriptor:
     def __set_name__(self, _, name):
@@ -59,6 +63,7 @@ class TargetDescriptor:
     def __set__(self, obj, value: TargetLike):
         value = target_factory(value)
         setattr(obj, self._name, value)
+
 
 def target_factory(value: TargetLike) -> Target:
     if isinstance(value, Target):
@@ -74,6 +79,7 @@ def target_factory(value: TargetLike) -> Target:
         raise TypeError(f"Invalid target value: {value}")
     return value
 
+
 def _split_addr_port(addr: str) -> tuple[str, int]:
     # This is a bit more complex than just splitting on ":", to handle IPv6 addresses.
     host = ""
@@ -85,12 +91,11 @@ def _split_addr_port(addr: str) -> tuple[str, int]:
     in_v6_host = False
 
     for c in addr:
-
-        if c == '[':
+        if c == "[":
             in_v6_host = True
             continue
 
-        if c == ']':
+        if c == "]":
             in_v6_host = False
             continue
 
@@ -110,5 +115,3 @@ def _split_addr_port(addr: str) -> tuple[str, int]:
             port = int(buf)
 
     return host, int(port)
-
-

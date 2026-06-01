@@ -20,9 +20,8 @@ from gnmi.util import constantize, get_gnmi_constant
 
 T = TypeVar("T")
 
-@deprecated(
-    "deprecated, use double_val"
-)
+
+@deprecated("deprecated, use double_val")
 @dataclass
 class Decimal64(BaseModel[pb.Decimal64]):
     dec: Decimal
@@ -40,7 +39,6 @@ class Decimal64(BaseModel[pb.Decimal64]):
     def precision(self) -> int:
         return self.exponent * -1
 
-
     @property
     def exponent(self) -> int:
         exp = self.dec.as_tuple().exponent
@@ -49,7 +47,6 @@ class Decimal64(BaseModel[pb.Decimal64]):
 
         return int(self.dec.as_tuple().exponent)
 
-
     def __float__(self) -> float:
         return float(self.dec)
 
@@ -57,7 +54,7 @@ class Decimal64(BaseModel[pb.Decimal64]):
         return str(self.dec)
 
     def encode(self) -> pb.Decimal64:
-        
+
         return pb.Decimal64(digits=self.digits, precision=self.precision)
 
     @classmethod
@@ -66,6 +63,7 @@ class Decimal64(BaseModel[pb.Decimal64]):
 
     def decimal(self) -> Decimal:
         return Decimal(str(float(self)))
+
 
 class ValueType(enum.Enum):
     ANY_VAL = enum.auto()
@@ -149,7 +147,6 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
     def __str__(self) -> str:
         return str(self.val)
 
-
     def to_json(self) -> Any:
         v = self.val
         if isinstance(v, bytes):
@@ -161,10 +158,10 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
         elif isinstance(v, (str, int, float, bool)) or v is None:
             return v
         elif isinstance(v, Decimal):
-                return float(v)
+            return float(v)
         else:
             raise TypeError(f"Unsupported type for JSON serialization: {type(v)}")
-        
+
     def encode(self) -> pb.TypedValue:
         params = {}
         val_type = self.val_type
@@ -178,7 +175,9 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
             else:
                 params["any_val"] = any_pb2.Any(value=str(self.val).encode("utf-8"))
         elif val_type in (ValueType.JSON_IETF_VAL, ValueType.JSON_VAL):
-            params["json_val"] = json.dumps(self.val, cls=ValueJsonEncoder).encode("utf-8")
+            params["json_val"] = json.dumps(self.val, cls=ValueJsonEncoder).encode(
+                "utf-8"
+            )
         elif val_type == ValueType.LEAFLIST_VAL and isinstance(self.val, list):
             sl = []
             for v in list(self.val):
@@ -187,7 +186,7 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
                 sl.append(v.encode())
             params["leaflist_val"] = pb.ScalarArray(element=sl)
         elif val_type == ValueType.DECIMAL_VAL:
-                params["decimal_val"] = self.val.encode() # type: ignore[]
+            params["decimal_val"] = self.val.encode()  # type: ignore[]
         else:
             params[self.val_type.name.lower()] = self.val
 
@@ -230,11 +229,13 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
         else:
             raise ValueError("Unhandled typed value %s" % v)
 
+
 class ValueJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Value):
             return o.value
         return o
+
 
 class ValueDescriptor:
     def __init__(self, *, default: None = None):
@@ -252,13 +253,15 @@ class ValueDescriptor:
     def __set__(self, instance, value):
         setattr(instance, self.name, value_factory(value))
 
+
 def value_type_factory(typ: ValueType | str) -> ValueType:
     if isinstance(typ, ValueType):
         return typ
     elif isinstance(typ, str):
-       return ValueType.from_str(typ)
+        return ValueType.from_str(typ)
     else:
         raise ValueError("Unhandled typed value %s" % typ)
+
 
 def value_factory(v: Any) -> Value:
     if isinstance(v, Value):
@@ -274,6 +277,7 @@ def value_factory(v: Any) -> Value:
         return Value(v, ValueType.from_val(v))
 
     raise ValueError("Unhandled value %s" % v)
+
 
 # @deprecated()
 @dataclass

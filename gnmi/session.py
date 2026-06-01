@@ -7,6 +7,7 @@ gnmi.session
 Implementation if gnmi.session API
 
 """
+
 from typing import Sequence, Iterable
 
 from grpc import ssl_channel_credentials, secure_channel, insecure_channel, Channel
@@ -33,6 +34,7 @@ from gnmi.models.update import UpdateList
 
 BasicAuth = tuple[str, str]
 
+
 class Session:
     r"""Represents a gNMI session
 
@@ -44,7 +46,8 @@ class Session:
 
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         target: TargetLike,
         metadata: dict | None = None,
         insecure: bool = False,
@@ -64,11 +67,11 @@ class Session:
 
         self._channel = self._new_channel()
 
-        self._stub = gnmi_pb2_grpc.gNMIStub(self._channel) # type: ignore
+        self._stub = gnmi_pb2_grpc.gNMIStub(self._channel)  # type: ignore
 
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._channel.close()
 
@@ -84,10 +87,14 @@ class Session:
         private_key = self._tls.client_key or None
 
         if self._tls.get_server_cert:
-            trusted_cert = get_server_certificate(self.target, self._tls.context, pem=True)
+            trusted_cert = get_server_certificate(
+                self.target, self._tls.context, pem=True
+            )
             creds = ssl_channel_credentials(root_certificates=trusted_cert)
-            return secure_channel(str(self.target), creds, options=list(self._grpc_options))
-        
+            return secure_channel(
+                str(self.target), creds, options=list(self._grpc_options)
+            )
+
         creds = ssl_channel_credentials(
             root_certificates=trusted_cert,
             private_key=private_key,
@@ -97,7 +104,6 @@ class Session:
         return secure_channel(
             str(self.target), creds, options=list(self._grpc_options.items())
         )
-
 
     def capabilities(self) -> CapabilityResponse:
         r"""Discover capabilities of the target
@@ -133,15 +139,15 @@ class Session:
         response = self._stub.Capabilities(_cr.encode(), metadata=self.metadata)
         return CapabilityResponse.decode(response)
 
-
-    def get(self, 
-            paths: Sequence[PathLike],
-            prefix: PathLike | None = None,
-            encoding: Encoding | str | int = Encoding.JSON,
-            data_type: DataType | str | int = DataType.ALL,
-            models: list[ModelData] = [],
-            extensions: list[ext_pb.Extension] = [],
-        ) -> GetResponse:
+    def get(
+        self,
+        paths: Sequence[PathLike],
+        prefix: PathLike | None = None,
+        encoding: Encoding | str | int = Encoding.JSON,
+        data_type: DataType | str | int = DataType.ALL,
+        models: list[ModelData] = [],
+        extensions: list[ext_pb.Extension] = [],
+    ) -> GetResponse:
         r"""Get snapshot of state from the target
 
         Usage::
@@ -183,14 +189,14 @@ class Session:
             type=data_type,
             encoding=encoding,
             models=models,
-            extensions=extensions
+            extensions=extensions,
         )
 
         resp = self._stub.Get(_gr.encode(), metadata=self.metadata)
         return GetResponse.decode(resp)
 
-
-    def set(self,
+    def set(
+        self,
         prefix: PathLike | None = None,
         deletes: Sequence[PathLike] = [],
         replacements: UpdateList = [],
@@ -224,20 +230,20 @@ class Session:
             deletes=deletes,
             replacements=replacements,
             updates=updates,
-            union_replacements=union_replacements
+            union_replacements=union_replacements,
         )
 
         return SetResponse.decode(self._stub.Set(_sr.encode(), metadata=self.metadata))
 
-
-    def subscribe(self, 
+    def subscribe(
+        self,
         subscriptions: Sequence[str | Path | Subscription],
         prefix: PathLike | None = None,
         encoding: Encoding | str | int = "json",
         mode: str = "stream",
         qos: int = 0,
         aggregate: bool = False,
-        timeout: int | None = None
+        timeout: int | None = None,
     ) -> Iterable[SubscribeResponse]:
         r"""Subscribe to state updates from the target
 
@@ -283,7 +289,7 @@ class Session:
         :type subscriptions: list
         :param prefix:
         :type: t.Optional[str]
-        :param encoding: 
+        :param encoding:
         :type: str
         :param mode:
         :type: str
@@ -291,7 +297,7 @@ class Session:
         :type: int
         :param aggregate:
         :type: bool
-        :param timeout: 
+        :param timeout:
         :type: int
         :rtype: gnmi.models.subscribe.SubscribeResponse
         """
@@ -304,8 +310,9 @@ class Session:
                     mode=mode,
                     allow_aggregation=aggregate,
                     encoding=encoding,
-                    qos=qos
-            )).encode()
+                    qos=qos,
+                )
+            ).encode()
 
         for r in self._stub.Subscribe(_sr(), timeout=timeout, metadata=self.metadata):
             yield SubscribeResponse.decode(r)

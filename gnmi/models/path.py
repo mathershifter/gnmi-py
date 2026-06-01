@@ -68,13 +68,13 @@ class Path(BaseModel[pb.Path]):
 
     def __truediv__(self, scalar):
         return self.__add__(scalar)
-    
+
     def __add__(self, scalar):
         right = path_factory(scalar)
         return self.append(right)
-    
+
     def is_empty(self):
-        return len(self.elem) == 0 and not self.origin  and not self.target
+        return len(self.elem) == 0 and not self.origin and not self.target
 
     @classmethod
     def from_str(cls, p: str) -> "Path":
@@ -83,13 +83,12 @@ class Path(BaseModel[pb.Path]):
             return cls(elem=[])
 
         origin, spl = split_path(p)
-        
+
         for el in spl:
             name, key = parse_elem(el)
             elems.append(PathElem(name=name, key=key))
 
         return cls(origin=origin, elem=elems)
-        
 
     def append(self, other: "str | Path | pb.Path", force: bool = False) -> "Path":
         other = path_factory(other)
@@ -104,29 +103,29 @@ class Path(BaseModel[pb.Path]):
         return Path(
             elem=list(self.elem) + list(other.elem),
             origin=self.origin,
-            target=self.target)
-
+            target=self.target,
+        )
 
     def encode(self) -> pb.Path:
         elem = [e.encode() for e in self.elem]
         if not self.origin and not self.target and len(elem) == 0:
-             return pb.Path()
+            return pb.Path()
         return pb.Path(elem=elem, origin=self.origin, target=self.target)
-
 
     @classmethod
     def decode(cls, v: pb.Path) -> "Path":
         p: list[PathElem] = []
         for elem in v.elem:
             p.append(PathElem.decode(elem))
-        
+
         if not v.origin and not v.target:
             return cls(elem=p)
-        
+
         return cls(p, v.origin, v.target)
 
 
 PathLike: TypeAlias = str | Path | pb.Path
+
 
 class PathDescriptor:
     def __init__(self, *, default: None | PathLike = None):
@@ -134,29 +133,26 @@ class PathDescriptor:
         if default is not None:
             self._default = path_factory(default)
 
-
     def __set_name__(self, _, name):
         self._name = "_" + name
-
 
     def __get__(self, inst, _):
         if inst is None:
             return self._default
         return getattr(inst, self._name, self._default)
 
-
     def __set__(self, inst, value: None | PathLike):
         if value is None:
             return None
         setattr(inst, self._name, path_factory(value))
 
+
 class Paths:
     def __set_name__(self, _, name):
         self._name = "_" + name
-    
+
     def __get__(self, inst, _):
         return getattr(inst, self._name, [])
-
 
     def __set__(self, inst, value: Sequence[PathLike]):
         # See Subscriptions.__set__ — handle dataclass-default round-trip.
@@ -165,6 +161,7 @@ class Paths:
         if not value:
             return
         setattr(inst, self._name, [path_factory(p) for p in value])
+
 
 def path_factory(path: PathLike) -> Path:
     if isinstance(path, Path):
@@ -204,21 +201,21 @@ def split_path(path: str) -> tuple[str, list[str]]:
             in_escape = False
             continue
 
-        if ch == '\\' and not in_key:
+        if ch == "\\" and not in_key:
             in_escape = True
             buf += ch
             continue
 
-        if ch == '[':
+        if ch == "[":
             in_key = True
-        elif ch == ']':
+        elif ch == "]":
             in_key = False
-        elif ch == '/' and not in_key:
+        elif ch == "/" and not in_key:
             if len(buf) > 0:
                 parts.append(buf)
             buf = ""
             continue
-        elif ch == ':' and not in_key:
+        elif ch == ":" and not in_key:
             if len(buf) > 0:
                 if not origin:
                     origin = buf
@@ -229,7 +226,7 @@ def split_path(path: str) -> tuple[str, list[str]]:
 
         buf += ch
 
-    if len(buf) != 0 or (len(path) != 1 and ch == '/'):
+    if len(buf) != 0 or (len(path) != 1 and ch == "/"):
         parts.append(buf)
 
     return origin, parts
@@ -245,18 +242,18 @@ def parse_elem(elem: str) -> tuple[str, dict[str, str]]:
     cur = ""
 
     for ch in elem:
-        if ch == '[' and not in_escape and not in_key:
+        if ch == "[" and not in_escape and not in_key:
             if not el:
                 el = buf
             buf = ""
             in_key = True
             continue
-        elif ch == '=' and not in_escape and in_key:
+        elif ch == "=" and not in_escape and in_key:
             cur = buf
             buf = ""
             continue
 
-        elif ch == ']' and not in_escape:
+        elif ch == "]" and not in_escape:
             keys[cur] = buf
             buf = ""
             in_key = False

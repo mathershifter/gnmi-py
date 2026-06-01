@@ -10,6 +10,7 @@ drive AsyncSession via `asyncio.run` — no pytest-asyncio dep needed.
 Each xfail test names the AsyncSession bug it covers in its reason
 string so the test surface doubles as a defect catalog.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,6 +33,7 @@ def _run(coro):
 # ---------------------------------------------------------------------------
 # Happy paths
 # ---------------------------------------------------------------------------
+
 
 async def test_async_capabilities(stub_server):
 
@@ -73,7 +75,7 @@ async def test_async_set_round_trips_all_ops(stub_server):
 
 
 async def test_async_subscribe_streams_then_sync(stub_server):
-    
+
     sess = AsyncSession(stub_server.target, insecure=True)
     try:
         seen = []
@@ -152,15 +154,18 @@ def test_async_session_get_server_cert_fetches_pem(stub_server):
         captured["root"] = root_certificates
         return mock.sentinel.creds
 
-    with mock.patch.object(
-        AsyncTLSConfig, "context", new_callable=mock.PropertyMock,
-        return_value=mock.sentinel.ctx,
-    ), mock.patch.object(
-        async_mod, "get_server_certificate", return_value=fetched_pem
-    ) as fake_fetch, mock.patch.object(
-        async_mod, "ssl_channel_credentials", side_effect=fake_creds
-    ), mock.patch.object(
-        async_mod, "secure_channel", return_value=mock.MagicMock()
+    with (
+        mock.patch.object(
+            AsyncTLSConfig,
+            "context",
+            new_callable=mock.PropertyMock,
+            return_value=mock.sentinel.ctx,
+        ),
+        mock.patch.object(
+            async_mod, "get_server_certificate", return_value=fetched_pem
+        ) as fake_fetch,
+        mock.patch.object(async_mod, "ssl_channel_credentials", side_effect=fake_creds),
+        mock.patch.object(async_mod, "secure_channel", return_value=mock.MagicMock()),
     ):
         AsyncSession("r1.lab:6030", tls=tls)
 
@@ -185,10 +190,9 @@ def test_async_session_tls_branch_builds_secure_channel():
         captured["creds"] = creds
         return mock.MagicMock()
 
-    with mock.patch.object(
-        async_mod, "ssl_channel_credentials", side_effect=fake_creds
-    ), mock.patch.object(
-        async_mod, "secure_channel", side_effect=fake_secure_channel
+    with (
+        mock.patch.object(async_mod, "ssl_channel_credentials", side_effect=fake_creds),
+        mock.patch.object(async_mod, "secure_channel", side_effect=fake_secure_channel),
     ):
         AsyncSession("r1.lab:6030", tls=tls)
 
@@ -208,6 +212,7 @@ def test_async_session_in_package_dunder_all():
 # ---------------------------------------------------------------------------
 # Open bugs
 # ---------------------------------------------------------------------------
+
 
 async def test_async_session_supports_async_context_manager(stub_server):
     async with AsyncSession(stub_server.target, insecure=True) as sess:

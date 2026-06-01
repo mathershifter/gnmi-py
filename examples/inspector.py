@@ -6,6 +6,7 @@ Inspect the shape of a subscribe stream — prints a TSV of
 (path, model class, kind) tuples for every prefix element, update, and
 error encountered before the first sync_response.
 """
+
 import argparse
 
 from gnmi import Session

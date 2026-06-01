@@ -31,7 +31,6 @@ test = [
     "pytest>=8.3.5",
     "pytest-cov",
     "ruff>=0.11.10",
-    "tox>=4.26.0",
     "toml>=0.10.2",
     "pytest-asyncio>=1.4.0",
 ]
@@ -52,6 +51,15 @@ gnmip = "gnmi:entry.main"
 [tool.setuptools.dynamic]
 version = {attr = "gnmi.__version__"}
 
+
+[tool.pytest.ini_options]
+junit_family = "xunit2"
+filterwarnings = [
+    "ignore::DeprecationWarning:google.*"
+]
+asyncio_mode = "auto"
+
+
 [tool.ruff]
 exclude = [
     "gnmi/proto",
@@ -59,23 +67,24 @@ exclude = [
 
 [tool.tox]
 requires = ["tox>=4.26"]
-env_list = ["3.9", "ruff"]
+env_list = ["3.10", "3.11", "3.12", "3.13", "3.14", "ruff"]
 
 [tool.tox.env_run_base]
-deps = ["pytest"]
+runner = "uv-venv-lock-runner"
+uv_sync_flags = ["--all-extras"]
 description = "Run test under {base_python}"
 commands = [["pytest"]]
 
 [tool.tox.env.ruff]
 description = "lint source code"
-deps = ["ruff"]
+runner = "uv-venv-lock-runner"
+uv_sync_flags = ["--all-extras"]
 commands = [
     ["ruff", "check", "."],
     ["ruff", "format", "--check", "."]
 ]
 
 [tool.mypy]
-#python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true

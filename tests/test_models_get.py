@@ -9,6 +9,7 @@ from gnmi.models.update import update_factory
 from gnmi.models.path import Path
 from gnmi.models import Notification
 
+
 def test_get_request():
     tests = [
         (
@@ -23,20 +24,24 @@ def test_get_request():
             pb.GetRequest(
                 prefix=pb.Path(elem=[pb.PathElem(name="z")]),
                 path=[
-                    pb.Path(elem=[
-                        pb.PathElem(name="a"),
-                        pb.PathElem(name="b"),
-                        pb.PathElem(name="b"),
-                        pb.PathElem(name="a"),
-                    ]),
-                    pb.Path(elem=[
-                        pb.PathElem(name="a"),
-                        pb.PathElem(name="c"),
-                        pb.PathElem(name="d"),
-                        pb.PathElem(name="c"),
-                    ])
-                ]
-            )
+                    pb.Path(
+                        elem=[
+                            pb.PathElem(name="a"),
+                            pb.PathElem(name="b"),
+                            pb.PathElem(name="b"),
+                            pb.PathElem(name="a"),
+                        ]
+                    ),
+                    pb.Path(
+                        elem=[
+                            pb.PathElem(name="a"),
+                            pb.PathElem(name="c"),
+                            pb.PathElem(name="d"),
+                            pb.PathElem(name="c"),
+                        ]
+                    ),
+                ],
+            ),
         )
     ]
 
@@ -58,9 +63,9 @@ def test_get_response():
                         prefix=Path.from_str("z"),
                         deletes=[Path.from_str(p) for p in ["a/b"]],
                         updates=[
-                            update_factory(u) for u in
-                            [("a/b", "test"), ("a/c", {"another": "test"})]
-                        ]
+                            update_factory(u)
+                            for u in [("a/b", "test"), ("a/c", {"another": "test"})]
+                        ],
                     ),
                 ]
             ),
@@ -70,30 +75,31 @@ def test_get_response():
                         timestamp=now,
                         prefix=pb.Path(elem=[pb.PathElem(name="z")]),
                         delete=[
-                            pb.Path(elem=[
-                                pb.PathElem(name="a"),
-                                pb.PathElem(name="b")
-                            ])
+                            pb.Path(elem=[pb.PathElem(name="a"), pb.PathElem(name="b")])
                         ],
                         update=[
                             pb.Update(
-                                path=pb.Path(elem=[
-                                    pb.PathElem(name="a", key={}),
-                                    pb.PathElem(name="b", key={}),
-                                ]),
+                                path=pb.Path(
+                                    elem=[
+                                        pb.PathElem(name="a", key={}),
+                                        pb.PathElem(name="b", key={}),
+                                    ]
+                                ),
                                 val=pb.TypedValue(string_val="test"),
                             ),
                             pb.Update(
-                                path=pb.Path(elem=[
-                                    pb.PathElem(name="a", key={}),
-                                    pb.PathElem(name="c", key={}),
-                                ]),
+                                path=pb.Path(
+                                    elem=[
+                                        pb.PathElem(name="a", key={}),
+                                        pb.PathElem(name="c", key={}),
+                                    ]
+                                ),
                                 val=pb.TypedValue(json_val=b'{"another": "test"}'),
-                            )
-                        ]
+                            ),
+                        ],
                     )
                 ]
-            )
+            ),
         )
     ]
 

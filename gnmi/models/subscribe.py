@@ -12,9 +12,9 @@ from gnmi.models.notification import Notification
 from gnmi.models.subscription_list import SubscriptionList
 from gnmi.util import oneof
 
+
 @dataclass
 class Poll(BaseModel[pb.Poll]):
-
     def encode(self) -> pb.Poll:
         return pb.Poll()
 
@@ -50,8 +50,10 @@ class SubscribeRequest(BaseModel[pb.SubscribeRequest]):
         )
 
     @classmethod
-    def decode(cls, v: pb.SubscribeRequest) -> 'SubscribeRequest':
-        if v.HasField("subscribe"):  # protobuf returns default-constructed sub-messages for unset oneof fields, so check presence first
+    def decode(cls, v: pb.SubscribeRequest) -> "SubscribeRequest":
+        if v.HasField(
+            "subscribe"
+        ):  # protobuf returns default-constructed sub-messages for unset oneof fields, so check presence first
             subscribe = SubscriptionList.decode(v.subscribe)
         else:
             subscribe = None
@@ -61,11 +63,7 @@ class SubscribeRequest(BaseModel[pb.SubscribeRequest]):
         else:
             poll = None
 
-        return cls(
-            subscribe=subscribe,
-            poll=poll,
-            extension=list(v.extension)
-        )
+        return cls(subscribe=subscribe, poll=poll, extension=list(v.extension))
 
 
 @dataclass
@@ -104,5 +102,5 @@ class SubscribeResponse(BaseModel[pb.SubscribeResponse]):
         return cls(
             update=Notification.decode(v.update),
             sync_response=v.sync_response,
-            error=err
+            error=err,
         )

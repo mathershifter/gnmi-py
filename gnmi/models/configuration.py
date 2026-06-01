@@ -3,12 +3,14 @@ Configuration model for gNMI client configuration.
 
 For future use, this model may be extended to include additional configuration options such as authentication credentials, TLS settings, etc.
 """
+
 from dataclasses import dataclass, field
 
 from gnmi.models.model import BaseModel
 from gnmi.models.target import Target
 from gnmi.models.subscribe import SubscribeRequest
 from gnmi.proto import target_pb2 as pb
+
 
 @dataclass
 class Configuration(BaseModel[pb.Configuration]):

@@ -6,6 +6,7 @@ Uses the top-level ``get`` / ``subscribe`` helpers from ``gnmi.api`` —
 each opens a short-lived ``Session`` for one RPC. For multi-RPC work,
 use ``Session`` directly as a context manager (see ``example_session.py``).
 """
+
 from gnmi import get, subscribe
 
 TARGET = "192.168.56.103:6030"

@@ -11,6 +11,7 @@ from gnmi.models.error import Error
 from gnmi.models.path import Path, PathDescriptor
 from gnmi.util import constantize
 
+
 class Operation(enum.Enum):
     INVALID = 0
     DELETE = 1
@@ -22,15 +23,15 @@ class Operation(enum.Enum):
     def from_str(cls, v: str) -> "Operation":
         return cls[constantize(v)]
 
+
 class OperationDescriptor:
     _default = Operation.INVALID
-    def __set_name__(self, owner, name):
-        self._name = "_"+name
 
+    def __set_name__(self, owner, name):
+        self._name = "_" + name
 
     def __get__(self, inst, owner):
         return getattr(inst, self._name, self._default)
-
 
     def __set__(self, inst, value: int | str | Operation):
         op = self._default
@@ -40,8 +41,9 @@ class OperationDescriptor:
             op = Operation(value)
         elif isinstance(value, str):
             op = Operation.from_str(value)
-    
+
         setattr(inst, self._name, op)
+
 
 @dataclass
 class UpdateResult(BaseModel[pb.UpdateResult]):
@@ -61,7 +63,6 @@ class UpdateResult(BaseModel[pb.UpdateResult]):
         else:
             raise ValueError("Invalid operation type")
 
-
     def encode(self) -> pb.UpdateResult:
         return pb.UpdateResult(
             path=self.path.encode() if self.path else None,
@@ -70,7 +71,4 @@ class UpdateResult(BaseModel[pb.UpdateResult]):
 
     @classmethod
     def decode(cls, v: pb.UpdateResult) -> "UpdateResult":
-        return cls(
-            path=Path.decode(v.path),
-            op=Operation(int(v.op))
-        )
+        return cls(path=Path.decode(v.path), op=Operation(int(v.op)))

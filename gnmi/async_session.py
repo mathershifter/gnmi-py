@@ -22,8 +22,16 @@ from gnmi.models.update import UpdateList
 
 BasicAuth = tuple[str, str]
 
+
 class AsyncSession:
-    def __init__(self, target: TargetLike, metadata: dict | None = None, insecure: bool = False, tls: TLSConfig | None = None, grpc_options: dict | None = None):
+    def __init__(
+        self,
+        target: TargetLike,
+        metadata: dict | None = None,
+        insecure: bool = False,
+        tls: TLSConfig | None = None,
+        grpc_options: dict | None = None,
+    ):
         self._target = target_factory(target)
         self._metadata = prepare_metadata(metadata or {})
         self._insecure = insecure
@@ -52,7 +60,9 @@ class AsyncSession:
         private_key = self._tls.client_key or None
 
         if self._tls.get_server_cert:
-            trusted_cert = get_server_certificate(self._target, self._tls.context, pem=True)
+            trusted_cert = get_server_certificate(
+                self._target, self._tls.context, pem=True
+            )
 
         creds = ssl_channel_credentials(
             root_certificates=trusted_cert,
@@ -94,19 +104,19 @@ class AsyncSession:
         """
 
         _cr = CapabilityRequest()
-        
+
         response = await self._stub.Capabilities(_cr.encode(), metadata=self._metadata)
         return CapabilityResponse.decode(response)
-    
 
-    async def get(self, 
-            paths: Sequence[PathLike],
-            prefix: PathLike | None = None,
-            encoding: Encoding | str | int = Encoding.JSON,
-            data_type: DataType | str | int = DataType.ALL,
-            models: list[ModelData] = [],
-            extensions: list[ext_pb.Extension] = [],
-        ) -> GetResponse:
+    async def get(
+        self,
+        paths: Sequence[PathLike],
+        prefix: PathLike | None = None,
+        encoding: Encoding | str | int = Encoding.JSON,
+        data_type: DataType | str | int = DataType.ALL,
+        models: list[ModelData] = [],
+        extensions: list[ext_pb.Extension] = [],
+    ) -> GetResponse:
         r"""Get snapshot of state from the target
 
         Usage::
@@ -148,14 +158,14 @@ class AsyncSession:
             type=data_type,
             encoding=encoding,
             models=models,
-            extensions=extensions
+            extensions=extensions,
         )
 
         response = await self._stub.Get(_gr.encode(), metadata=self._metadata)
         return GetResponse.decode(response)
 
-
-    async def set(self,
+    async def set(
+        self,
         prefix: PathLike | None = None,
         deletes: Sequence[PathLike] = [],
         replacements: UpdateList = [],
@@ -189,21 +199,21 @@ class AsyncSession:
             deletes=deletes,
             replacements=replacements,
             updates=updates,
-            union_replacements=union_replacements
+            union_replacements=union_replacements,
         )
 
         response = await self._stub.Set(_sr.encode(), metadata=self._metadata)
         return SetResponse.decode(response)
 
-
-    async def subscribe(self, 
+    async def subscribe(
+        self,
         subscriptions: Sequence[str | Path | Subscription],
         prefix: PathLike | None = None,
         encoding: Encoding | str | int = "json",
         mode: str = "stream",
         qos: int = 0,
         aggregate: bool = False,
-        timeout: int | None = None
+        timeout: int | None = None,
     ) -> AsyncIterable[SubscribeResponse]:
         r"""Subscribe to state updates from the target
 
@@ -249,7 +259,7 @@ class AsyncSession:
         :type subscriptions: list
         :param prefix:
         :type: t.Optional[str]
-        :param encoding: 
+        :param encoding:
         :type: str
         :param mode:
         :type: str
@@ -257,7 +267,7 @@ class AsyncSession:
         :type: int
         :param aggregate:
         :type: bool
-        :param timeout: 
+        :param timeout:
         :type: int
         :rtype: gnmi.models.subscribe.SubscribeResponse
         """
@@ -270,8 +280,11 @@ class AsyncSession:
                     mode=mode,
                     allow_aggregation=aggregate,
                     encoding=encoding,
-                    qos=qos
-            )).encode()
+                    qos=qos,
+                )
+            ).encode()
 
-        async for r in self._stub.Subscribe(_sr(), timeout=timeout, metadata=self._metadata):
+        async for r in self._stub.Subscribe(
+            _sr(), timeout=timeout, metadata=self._metadata
+        ):
             yield SubscribeResponse.decode(r)

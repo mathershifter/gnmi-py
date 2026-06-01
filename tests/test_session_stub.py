@@ -7,6 +7,7 @@ server (AUDIT.md Testing #1). The existing tests in test_session.py /
 test_api.py only run when GNMI_TARGET points at a live device — these run
 unconditionally in CI.
 """
+
 from __future__ import annotations
 
 import grpc
@@ -24,9 +25,12 @@ from tests.conftest import STUB_GNMI_VERSION, STUB_HOSTNAME
 # Session
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def session(stub_target):
-    return Session(stub_target, insecure=True, metadata={"username": "u", "password": "p"})
+    return Session(
+        stub_target, insecure=True, metadata={"username": "u", "password": "p"}
+    )
 
 
 def test_session_capabilities(session, stub_server):
@@ -99,6 +103,7 @@ def test_session_subscribe_streams_then_sync(session):
 # High-level api.* wrappers
 # ---------------------------------------------------------------------------
 
+
 def test_api_capabilities(stub_target):
     resp = api.capabilities(stub_target, insecure=True)
     assert resp.gnmi_version == STUB_GNMI_VERSION
@@ -112,7 +117,9 @@ def test_api_get(stub_target):
 
 def test_api_subscribe(stub_target):
     notifs = list(
-        api.subscribe(stub_target, ["/system/config/hostname"], insecure=True, mode="once")
+        api.subscribe(
+            stub_target, ["/system/config/hostname"], insecure=True, mode="once"
+        )
     )
     # api.subscribe yields notifications only (sync responses are dropped).
     assert len(notifs) == 1
@@ -130,6 +137,7 @@ def test_api_delete_replace_update(stub_target, stub_server):
 # ---------------------------------------------------------------------------
 # TLS branch in Session._new_channel (AUDIT.md Testing #9)
 # ---------------------------------------------------------------------------
+
 
 def test_session_tls_branch_builds_secure_channel():
     """Without `insecure=True` and with a TLSConfig, Session must build a
@@ -154,10 +162,13 @@ def test_session_tls_branch_builds_secure_channel():
         captured["creds"] = creds
         return mock.MagicMock()
 
-    with mock.patch.object(
-        session_mod, "ssl_channel_credentials", side_effect=fake_creds
-    ), mock.patch.object(
-        session_mod, "secure_channel", side_effect=fake_secure_channel
+    with (
+        mock.patch.object(
+            session_mod, "ssl_channel_credentials", side_effect=fake_creds
+        ),
+        mock.patch.object(
+            session_mod, "secure_channel", side_effect=fake_secure_channel
+        ),
     ):
         Session("r1.lab:6030", tls=tls)
 
@@ -180,6 +191,7 @@ def test_session_requires_tls_or_insecure():
 # ---------------------------------------------------------------------------
 # Stream-side error: server returns OK chunks then raises (AUDIT.md #6)
 # ---------------------------------------------------------------------------
+
 
 def test_session_subscribe_propagates_stream_error(session, stub_server):
     """A non-OK status mid-stream must surface as grpc.RpcError on the

@@ -5,6 +5,7 @@ import time
 from gnmi.models import Notification
 from gnmi.proto import gnmi_pb2 as pb
 
+
 def test_notification():
     now = time.time_ns()
     tests = [
@@ -13,37 +14,33 @@ def test_notification():
                 timestamp=now,
                 prefix="z",
                 deletes=["a/b"],
-                updates=[
-                    ("a/b", "test"),
-                    ("a/c", {"another": "test"})
-                ]
+                updates=[("a/b", "test"), ("a/c", {"another": "test"})],
             ),
             pb.Notification(
                 timestamp=now,
                 prefix=pb.Path(elem=[pb.PathElem(name="z", key={})]),
-                delete=[
-                    pb.Path(elem=[
-                        pb.PathElem(name="a"),
-                        pb.PathElem(name="b")
-                    ])
-                ],
+                delete=[pb.Path(elem=[pb.PathElem(name="a"), pb.PathElem(name="b")])],
                 update=[
                     pb.Update(
-                        path=pb.Path(elem=[
-                            pb.PathElem(name="a", key={}),
-                            pb.PathElem(name="b", key={}),
-                        ]),
+                        path=pb.Path(
+                            elem=[
+                                pb.PathElem(name="a", key={}),
+                                pb.PathElem(name="b", key={}),
+                            ]
+                        ),
                         val=pb.TypedValue(string_val="test"),
                     ),
                     pb.Update(
-                        path=pb.Path(elem=[
-                            pb.PathElem(name="a", key={}),
-                            pb.PathElem(name="c", key={}),
-                        ]),
+                        path=pb.Path(
+                            elem=[
+                                pb.PathElem(name="a", key={}),
+                                pb.PathElem(name="c", key={}),
+                            ]
+                        ),
                         val=pb.TypedValue(json_val=b'{"another": "test"}'),
-                    )
-                ]
-            )
+                    ),
+                ],
+            ),
         ),
         (
             Notification(
@@ -51,15 +48,17 @@ def test_notification():
                 updates=[],
                 deletes=[
                     "/interfaces/interface[name=Ethernet1]",
-                ]
+                ],
             ),
             pb.Notification(
                 timestamp=now,
                 delete=[
-                    pb.Path(elem=[
-                        pb.PathElem(name="interfaces", key={}),
-                        pb.PathElem(name="interface", key={"name": "Ethernet1"}),
-                    ])
+                    pb.Path(
+                        elem=[
+                            pb.PathElem(name="interfaces", key={}),
+                            pb.PathElem(name="interface", key={"name": "Ethernet1"}),
+                        ]
+                    )
                 ],
             ),
         ),
@@ -70,16 +69,18 @@ def test_notification():
                 updates=[],
                 deletes=[
                     "/interfaces/interface[name=Ethernet1]",
-                ]
+                ],
             ),
             pb.Notification(
                 timestamp=now,
                 prefix=pb.Path(),
                 delete=[
-                    pb.Path(elem=[
-                        pb.PathElem(name="interfaces", key={}),
-                        pb.PathElem(name="interface", key={"name": "Ethernet1"}),
-                    ])
+                    pb.Path(
+                        elem=[
+                            pb.PathElem(name="interfaces", key={}),
+                            pb.PathElem(name="interface", key={"name": "Ethernet1"}),
+                        ]
+                    )
                 ],
             ),
         ),
@@ -89,26 +90,34 @@ def test_notification():
                 prefix="/interfaces",
                 deletes=[
                     "interface[name=Ethernet1]",
-                ]
+                ],
             ),
             pb.Notification(
                 timestamp=now,
-                prefix=pb.Path(elem=[
-                    pb.PathElem(name="interfaces", key={}),
-                ]),
+                prefix=pb.Path(
+                    elem=[
+                        pb.PathElem(name="interfaces", key={}),
+                    ]
+                ),
                 delete=[
-                    pb.Path(elem=[
-                        pb.PathElem(name="interface", key={"name": "Ethernet1"}),
-                    ])
+                    pb.Path(
+                        elem=[
+                            pb.PathElem(name="interface", key={"name": "Ethernet1"}),
+                        ]
+                    )
                 ],
             ),
-        )
+        ),
     ]
 
     for test in tests:
         notif, want = test
-        assert Notification.decode(want).encode() == want, "Decoded and re-encoded notification does not match expected"
-        assert Notification.decode(notif.encode()) == notif, "Decoded and re-encoded notification does not match original"
-        assert Notification.decode(want) == notif 
+        assert Notification.decode(want).encode() == want, (
+            "Decoded and re-encoded notification does not match expected"
+        )
+        assert Notification.decode(notif.encode()) == notif, (
+            "Decoded and re-encoded notification does not match original"
+        )
+        assert Notification.decode(want) == notif
         assert notif.encode() == want
         # assert Notification.decode(want) == notif

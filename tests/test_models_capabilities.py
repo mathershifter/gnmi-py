@@ -10,7 +10,7 @@ from gnmi.models.capabilities import CapabilityResponse
 from gnmi.util import get_gnmi_constant
 
 # gnmic -a localhost:6030 -u admin --insecure capabilities --format json | jq '.["supported-models"] | map(select(.name | startswith("arista") | not))'
-supported_models = b'''[
+supported_models = b"""[
   {
     "name": "openconfig-mpls-types",
     "organization": "OpenConfig working group",
@@ -641,13 +641,14 @@ supported_models = b'''[
     "version": "1.0.0"
   }
 ]
-'''
+"""
 
-supported_encodings = b'''[
+supported_encodings = b"""[
     "JSON",
     "JSON_IETF",
     "ASCII"
-]'''
+]"""
+
 
 def test_capabilities_response():
     models = json.loads(supported_models)
@@ -655,22 +656,28 @@ def test_capabilities_response():
     tests = [
         (
             CapabilityResponse(
-                gnmi_version='0.7.0',
-                supported_models=[ModelData(
-                    name=m['name'],
-                    organization=m['organization'],
-                    version=m.get('version'),
-                ) for m in models],
-                supported_encodings=[Encoding[e] for e in encodings]
+                gnmi_version="0.7.0",
+                supported_models=[
+                    ModelData(
+                        name=m["name"],
+                        organization=m["organization"],
+                        version=m.get("version"),
+                    )
+                    for m in models
+                ],
+                supported_encodings=[Encoding[e] for e in encodings],
             ),
             pb.CapabilityResponse(
-                gNMI_version='0.7.0',
-                supported_models=[pb.ModelData(
-                    name=m['name'],
-                    organization=m['organization'],
-                    version=m.get('version'),
-                ) for m in models],
-                supported_encodings=[get_gnmi_constant(e) for e in encodings]
+                gNMI_version="0.7.0",
+                supported_models=[
+                    pb.ModelData(
+                        name=m["name"],
+                        organization=m["organization"],
+                        version=m.get("version"),
+                    )
+                    for m in models
+                ],
+                supported_encodings=[get_gnmi_constant(e) for e in encodings],
             ),
         )
     ]

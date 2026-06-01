@@ -13,6 +13,7 @@ Defaults can be loaded from a TOML config file (default ``~/.gnmirc``,
 overridable with ``--config``). Top-level keys feed group options;
 sections like ``[subscribe]`` feed the matching subcommand.
 """
+
 import asyncio
 import os
 import pathlib
@@ -41,6 +42,7 @@ GNMIRC_FILENAMES = (".gnmirc", "_gnmirc")
 # ---------------------------------------------------------------------------
 # Version string and shared option groups
 # ---------------------------------------------------------------------------
+
 
 def format_version() -> str:
     return "gnmip %s [protobuf %s, grpcio %s]" % (
@@ -99,6 +101,7 @@ ENCODINGS = ["json", "bytes", "proto", "ascii", "json-ietf"]
 
 FORMATTERS = ["pretty", "json", "jsonl", "yaml"]
 
+
 def _build_tls_config(
     ca: str, cert: str, key: str, get_target_certs: bool, no_verify: bool
 ) -> TLSConfig | None:
@@ -121,8 +124,11 @@ def _new_session(ctx: click.Context) -> AsyncSession:
         metadata = {"username": o["username"], "password": o["password"] or ""}
 
     tls = _build_tls_config(
-        o["tls_ca"], o["tls_cert"], o["tls_key"], o["tls_get_target_certificate"],
-        o["tls_no_verify"]
+        o["tls_ca"],
+        o["tls_cert"],
+        o["tls_key"],
+        o["tls_get_target_certificate"],
+        o["tls_no_verify"],
     )
 
     grpc_options: dict = {}
@@ -147,6 +153,7 @@ def _build_prefix(prefix: str, with_target: bool, target: str) -> Path | None:
         p.target = target_factory(target).hostaddr
     return p
 
+
 def async_command(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -156,17 +163,36 @@ def async_command(f):
             print("Task was aborted/canceled.")
         except KeyboardInterrupt:
             print("\nInterrupted.")
+
     return wrapper
+
 
 # ---------------------------------------------------------------------------
 # Click command group + subcommands
 # ---------------------------------------------------------------------------
 
+
 @click.group()
 @click.version_option(format_version(), prog_name="gnmip")
-@click.option("--target", "-t", default="", help="gNMI target address (host:port). Can also be set via the config file.")
-@click.option("-j", "--json", is_flag=True, default=False, help="output notifications as JSON, short for --format json")
-@click.option("--format", default="pretty", type=click.Choice(FORMATTERS), help="output format (json, yaml, etc.)")
+@click.option(
+    "--target",
+    "-t",
+    default="",
+    help="gNMI target address (host:port). Can also be set via the config file.",
+)
+@click.option(
+    "-j",
+    "--json",
+    is_flag=True,
+    default=False,
+    help="output notifications as JSON, short for --format json",
+)
+@click.option(
+    "--format",
+    default="pretty",
+    type=click.Choice(FORMATTERS),
+    help="output format (json, yaml, etc.)",
+)
 @click.option("--tls-ca", default="", type=click.Path(), help="certificate authority")
 @click.option("--tls-cert", default="", type=click.Path(), help="client certificate")
 @click.option("--tls-key", default="", type=click.Path(), help="client key")
@@ -176,7 +202,12 @@ def async_command(f):
     default=False,
     help="fetch and validate the target's TLS cert before opening the gRPC channel",
 )
-@click.option("--tls-no-verify", is_flag=True, default=False, help="disable TLS certificate verification")
+@click.option(
+    "--tls-no-verify",
+    is_flag=True,
+    default=False,
+    help="disable TLS certificate verification",
+)
 @click.option("--insecure", is_flag=True, default=False, help="disable TLS")
 @click.option("--host-override", default="", help="override gRPC server hostname (SNI)")
 @click.option("--debug-grpc", is_flag=True, default=False, help="enable gRPC debugging")
@@ -193,7 +224,7 @@ def cli(ctx: click.Context, **kwargs) -> None:
     """gNMI client."""
     if kwargs["debug_grpc"]:
         util.enable_grpc_debuging()
-    
+
     # The --json flag is a shorthand for --format json, for convenience and backwards compatibility.
     if kwargs["json"]:
         kwargs["format"] = "json"
@@ -215,7 +246,7 @@ async def capabilities(ctx: click.Context) -> None:
             PrettyCapabilities().send(cap)
         else:
             JsonCapabilities().send(cap)
-                
+
 
 @cli.command()
 @click.argument("paths", nargs=-1)
@@ -241,7 +272,9 @@ async def capabilities(ctx: click.Context) -> None:
 )
 @click.pass_context
 @async_command
-async def get(ctx: click.Context, paths, encoding, prefix, prefix_target, get_type) -> None:
+async def get(
+    ctx: click.Context, paths, encoding, prefix, prefix_target, get_type
+) -> None:
     """Fetch a snapshot for one or more paths."""
     prefix_path = _build_prefix(prefix, prefix_target, ctx.obj["target"])
     fmt = ctx.obj["format"]
@@ -258,7 +291,6 @@ async def get(ctx: click.Context, paths, encoding, prefix, prefix_target, get_ty
                 PrettyNotification().send(notif)
             else:
                 JsonNotification().send(notif)
-    
 
 
 @cli.command()
@@ -288,12 +320,24 @@ async def get(ctx: click.Context, paths, encoding, prefix, prefix_target, get_ty
     default="target-defined",
     show_default=True,
 )
-@click.option("--interval", default="10s", show_default=True, help="sample interval (e.g. 10s, 500ms)")
+@click.option(
+    "--interval",
+    default="10s",
+    show_default=True,
+    help="sample interval (e.g. 10s, 500ms)",
+)
 @click.option("--heartbeat", default="", help="heartbeat interval (e.g. 30s)")
 @click.option("--aggregate", is_flag=True, default=False, help="allow aggregation")
-@click.option("--suppress", is_flag=True, default=False, help="suppress redundant updates")
+@click.option(
+    "--suppress", is_flag=True, default=False, help="suppress redundant updates"
+)
 @click.option("--qos", type=int, default=0, show_default=True, help="DSCP marking")
-@click.option("--detail", is_flag=True, default=False, help="display detailed notification messages")
+@click.option(
+    "--detail",
+    is_flag=True,
+    default=False,
+    help="display detailed notification messages",
+)
 @click.pass_context
 @async_command
 async def subscribe(
@@ -309,7 +353,7 @@ async def subscribe(
     aggregate,
     suppress,
     qos,
-    detail
+    detail,
 ) -> None:
     """Subscribe to updates for one or more paths."""
 
@@ -345,7 +389,7 @@ async def subscribe(
                         break
                     continue
                 # PrettyNotification().send(resp.update)
-                
+
                 if format == "pretty":
                     if detail:
                         PrettyNotification().send(resp.update)

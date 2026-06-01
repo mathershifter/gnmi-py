@@ -7,6 +7,7 @@ from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.model import BaseModel
 from gnmi.decorator import deprecated
 
+
 @deprecated(
     (
         "Deprecated in favour of using the "
@@ -22,7 +23,7 @@ class Error(BaseModel[pb.Error]):
 
     def encode(self) -> pb.Error:
         return pb.Error(code=self.code, message=self.message, data=self.data)
-   
+
     @classmethod
     def decode(cls, v: pb.Error) -> "Error":
         return cls(code=v.code, message=v.message, data=v.data)

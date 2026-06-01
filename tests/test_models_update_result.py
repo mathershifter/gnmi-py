@@ -8,11 +8,16 @@ def test_update_result():
     tests = [
         (
             ("/a/b/c", "replace"),
-            pb.UpdateResult(path=pb.Path(elem=[
-                pb.PathElem(name='a'),
-                pb.PathElem(name='b'),
-                pb.PathElem(name='c'),
-            ]), op=pb.UpdateResult.Operation.REPLACE),
+            pb.UpdateResult(
+                path=pb.Path(
+                    elem=[
+                        pb.PathElem(name="a"),
+                        pb.PathElem(name="b"),
+                        pb.PathElem(name="c"),
+                    ]
+                ),
+                op=pb.UpdateResult.Operation.REPLACE,
+            ),
         )
     ]
 

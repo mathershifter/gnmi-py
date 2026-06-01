@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.models.model import BaseModel
 
+
 @dataclass
 class ModelData(BaseModel[pb.ModelData]):
     name: str
@@ -13,16 +14,9 @@ class ModelData(BaseModel[pb.ModelData]):
 
     def encode(self) -> pb.ModelData:
         return pb.ModelData(
-            name=self.name,
-            organization=self.organization,
-            version=self.version
+            name=self.name, organization=self.organization, version=self.version
         )
 
     @classmethod
     def decode(cls, v: pb.ModelData) -> "ModelData":
-        return cls(
-            name=v.name,
-            organization=v.organization,
-            version=v.version
-        )
-
+        return cls(name=v.name, organization=v.organization, version=v.version)

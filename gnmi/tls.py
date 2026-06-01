@@ -3,6 +3,7 @@ import ssl
 from dataclasses import dataclass
 from gnmi.models.target import Target
 
+
 @dataclass
 class TLSConfig:
     ca_cert: bytes | None
@@ -23,7 +24,10 @@ class TLSConfig:
 
         return ssl.create_default_context()
 
-def get_server_certificate(t: Target, context: ssl.SSLContext | None = None, pem: bool = False) -> bytes | None:
+
+def get_server_certificate(
+    t: Target, context: ssl.SSLContext | None = None, pem: bool = False
+) -> bytes | None:
     hostaddr, port = t.hostaddr, t.port
     context = context if context else ssl.create_default_context()
     with socket.create_connection((hostaddr, port)) as conn:

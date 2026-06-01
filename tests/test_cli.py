@@ -15,6 +15,7 @@ from gnmi.cli import cli, format_version, load_rc
 # format_version (used by --version)
 # ---------------------------------------------------------------------------
 
+
 def test_format_version_includes_grpc_and_protobuf():
     s = format_version()
     assert s.startswith("gnmip ")
@@ -31,6 +32,7 @@ def test_version_option_prints_format_version():
 # ---------------------------------------------------------------------------
 # Help text — exercises argument / option wiring
 # ---------------------------------------------------------------------------
+
 
 def test_top_level_help_lists_subcommands():
     result = CliRunner().invoke(cli, ["--help"])
@@ -57,8 +59,11 @@ def test_target_is_required():
 # End-to-end: each subcommand against the in-process stub server
 # ---------------------------------------------------------------------------
 
+
 def test_cli_capabilities_against_stub(stub_server):
-    result = CliRunner().invoke(cli, ["--insecure", "-t", stub_server.target, "capabilities"])
+    result = CliRunner().invoke(
+        cli, ["--insecure", "-t", stub_server.target, "capabilities"]
+    )
     assert result.exit_code == 0, result.output
     assert "gNMI Version:" in result.output
     assert "openconfig-system" in result.output
@@ -66,7 +71,15 @@ def test_cli_capabilities_against_stub(stub_server):
 
 def test_cli_get_against_stub(stub_server):
     result = CliRunner().invoke(
-        cli, ["--json", "--insecure", "-t", stub_server.target, "get", "/system/config/hostname"]
+        cli,
+        [
+            "--json",
+            "--insecure",
+            "-t",
+            stub_server.target,
+            "get",
+            "/system/config/hostname",
+        ],
     )
     assert result.exit_code == 0, result.output
     print(f"Result output: {result.output}")
@@ -76,7 +89,17 @@ def test_cli_get_against_stub(stub_server):
 
 def test_cli_subscribe_against_stub(stub_server):
     result = CliRunner().invoke(
-        cli, ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "/a"]
+        cli,
+        [
+            "--json",
+            "--insecure",
+            "-t",
+            stub_server.target,
+            "subscribe",
+            "--mode",
+            "once",
+            "/a",
+        ],
     )
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.strip().splitlines()[0])
@@ -85,8 +108,18 @@ def test_cli_subscribe_against_stub(stub_server):
 
 def test_cli_username_metadata_propagates(stub_server):
     result = CliRunner().invoke(
-        cli, ["--json", "--insecure", "-u", "admin", "-p", "pw", "-t", stub_server.target,
-              "capabilities"],
+        cli,
+        [
+            "--json",
+            "--insecure",
+            "-u",
+            "admin",
+            "-p",
+            "pw",
+            "-t",
+            stub_server.target,
+            "capabilities",
+        ],
     )
     assert result.exit_code == 0, result.output
     md = dict(stub_server.servicer.last_metadata)
@@ -98,18 +131,14 @@ def test_cli_username_metadata_propagates(stub_server):
 # ~/.gnmirc — auto-loaded TOML defaults (precedence: rc < --config < CLI)
 # ---------------------------------------------------------------------------
 
+
 def test_load_rc_returns_empty_when_no_file(monkeypatch, tmp_path):
     monkeypatch.setattr(cli_mod, "GNMIRC_PATH", str(tmp_path))
     assert load_rc() == {}
 
 
 def test_load_rc_reads_dot_gnmirc_toml(monkeypatch, tmp_path):
-    (tmp_path / ".gnmirc").write_text(
-        'insecure = true\n'
-        '\n'
-        '[subscribe]\n'
-        'mode = "once"\n'
-    )
+    (tmp_path / ".gnmirc").write_text('insecure = true\n\n[subscribe]\nmode = "once"\n')
     monkeypatch.setattr(cli_mod, "GNMIRC_PATH", str(tmp_path))
     assert load_rc() == {
         "insecure": True,
@@ -118,8 +147,8 @@ def test_load_rc_reads_dot_gnmirc_toml(monkeypatch, tmp_path):
 
 
 def test_load_rc_prefers_dot_gnmirc_over_underscore(monkeypatch, tmp_path):
-    (tmp_path / "_gnmirc").write_text('insecure = false\n')
-    (tmp_path / ".gnmirc").write_text('insecure = true\n')
+    (tmp_path / "_gnmirc").write_text("insecure = false\n")
+    (tmp_path / ".gnmirc").write_text("insecure = true\n")
     monkeypatch.setattr(cli_mod, "GNMIRC_PATH", str(tmp_path))
     assert load_rc()["insecure"] is True
 
@@ -140,19 +169,15 @@ def test_rc_defaults_drive_cli_when_no_explicit_flag(stub_server):
 # --config FILE — explicit overrides for rc defaults; YAML or TOML
 # ---------------------------------------------------------------------------
 
+
 def test_config_file_toml_overrides_rc_defaults(stub_server, tmp_path):
     """rc says `mode = stream`; --config FILE flips to `once`."""
     cfg = tmp_path / "gnmip.toml"
-    cfg.write_text(
-        'insecure = true\n'
-        '\n'
-        '[subscribe]\n'
-        'mode = "once"\n'
-    )
+    cfg.write_text('insecure = true\n\n[subscribe]\nmode = "once"\n')
     result = CliRunner().invoke(
         cli,
         ["--config", str(cfg), "-t", stub_server.target, "subscribe", "/a"],
-        default_map={"format": "json","subscribe": {"mode": "stream"}},
+        default_map={"format": "json", "subscribe": {"mode": "stream"}},
     )
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.strip().splitlines()[0])
@@ -161,11 +186,7 @@ def test_config_file_toml_overrides_rc_defaults(stub_server, tmp_path):
 
 def test_config_file_yaml_supported(stub_server, tmp_path):
     cfg = tmp_path / "gnmip.yaml"
-    cfg.write_text(
-        "insecure: true\n"
-        "subscribe:\n"
-        "  mode: once\n"
-    )
+    cfg.write_text("insecure: true\nsubscribe:\n  mode: once\n")
     result = CliRunner().invoke(
         cli,
         ["--json", "--config", str(cfg), "-t", stub_server.target, "subscribe", "/a"],

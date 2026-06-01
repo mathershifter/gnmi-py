@@ -43,12 +43,14 @@ requires_live_target = pytest.mark.skipif(
 STUB_GNMI_VERSION = "0.10.0-stub"
 STUB_HOSTNAME = "stub-target"
 
+
 @pytest.fixture(scope="session", autouse=True)
 def event_loop():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     yield loop
     loop.close()
+
 
 def _path_key(p: pb.Path) -> bytes:
     """Stable, hashable key for a proto Path."""
@@ -207,6 +209,7 @@ def stub_target(stub_server) -> str:
 # With GNMI_TARGET set: use the real device and the user's TLS material.
 # Without: spin up the stub server and run insecure against it. Tests that
 # need behaviors the stub can't reproduce should use @requires_live_target.
+
 
 @pytest.fixture
 def target(request) -> str:

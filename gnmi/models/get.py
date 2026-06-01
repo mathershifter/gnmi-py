@@ -13,11 +13,13 @@ from gnmi.models.model_data import ModelData
 from gnmi.models.notification import Notification
 from gnmi.models.error import Error
 
+
 class DataType(enum.Enum):
     ALL = 0
     CONFIG = 1
     STATE = 2
     OPERATIONAL = 3
+
 
 class DataTypeDescrpitor:
     _default = DataType.ALL
@@ -43,6 +45,7 @@ class DataTypeDescrpitor:
             except KeyError:
                 raise TypeError(f"invalid data type: {value.upper()}")
         setattr(instance, self.name, dt)
+
 
 @dataclass
 class GetRequest(BaseModel[pb.GetRequest]):
@@ -72,6 +75,7 @@ class GetRequest(BaseModel[pb.GetRequest]):
             type=DataType(int(v.type)),
         )
 
+
 @dataclass
 class GetResponse(BaseModel[pb.GetResponse]):
     notifications: list[Notification]
@@ -79,9 +83,7 @@ class GetResponse(BaseModel[pb.GetResponse]):
     extension: list[ext_pb2.Extension] = field(default_factory=list)
 
     def encode(self) -> pb.GetResponse:
-        return pb.GetResponse(
-            notification=[n.encode() for n in self.notifications]
-        )
+        return pb.GetResponse(notification=[n.encode() for n in self.notifications])
 
     @classmethod
     def decode(cls, v: pb.GetResponse) -> "GetResponse":

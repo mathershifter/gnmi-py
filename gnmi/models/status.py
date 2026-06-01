@@ -4,6 +4,7 @@ from typing import Any
 from dataclasses import dataclass
 import grpc
 
+
 @dataclass
 class Status:
     code: grpc.StatusCode

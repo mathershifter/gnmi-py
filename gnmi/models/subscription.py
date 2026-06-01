@@ -4,12 +4,13 @@ import enum
 
 from dataclasses import dataclass
 
-from  gnmi.models.descriptor import Duration, Enum
+from gnmi.models.descriptor import Duration, Enum
 from gnmi.proto import gnmi_pb2 as pb
 
 from gnmi.util import constantize, get_gnmi_constant
 from gnmi.models.model import BaseModel
 from gnmi.models.path import Path, PathDescriptor
+
 
 class SubscriptionMode(enum.Enum):
     TARGET_DEFINED = 0

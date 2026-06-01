@@ -6,6 +6,7 @@
 
 The CLI (`gnmip`) is built on top of this.
 """
+
 import argparse
 import asyncio
 
@@ -27,7 +28,9 @@ def parse_args():
 async def amain(args) -> None:
     metadata = {"username": args.username, "password": args.password}
 
-    async with AsyncSession(args.target, metadata=metadata, insecure=args.insecure) as sess:
+    async with AsyncSession(
+        args.target, metadata=metadata, insecure=args.insecure
+    ) as sess:
         caps = await sess.capabilities()
         print(f"gNMI version: {caps.gnmi_version}\n")
 

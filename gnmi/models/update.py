@@ -10,7 +10,8 @@ from gnmi.models.model import BaseModel
 from gnmi.models.path import Path, PathDescriptor, path_factory
 from gnmi.models.value import ValueDescriptor, value_factory
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 @dataclass
 class Update(BaseModel[pb.Update]):
@@ -43,6 +44,7 @@ class Update(BaseModel[pb.Update]):
             duplicates=v.duplicates,
         )
 
+
 UpdateTuple_ = tuple[str, Any] | tuple[str, Any, int]
 UpdateItem_ = Update | pb.Update | UpdateTuple_
 UpdateList = Sequence[UpdateItem_]
@@ -51,10 +53,9 @@ UpdateList = Sequence[UpdateItem_]
 class Updates:
     def __set_name__(self, _, name):
         self._name = "_" + name
-    
+
     def __get__(self, inst, _):
         return getattr(inst, self._name, [])
-
 
     def __set__(self, inst, value: UpdateList):
         # See Subscriptions.__set__ — handle dataclass-default round-trip.
@@ -63,6 +64,7 @@ class Updates:
         if not value:
             return
         setattr(inst, self._name, update_list_factory(value))
+
 
 def update_list_factory(ul: UpdateList) -> list[Update]:
     return [update_factory(update) for update in ul]
@@ -77,7 +79,6 @@ def update_factory(update: UpdateItem_) -> Update:
         return Update.decode(update)
 
     if isinstance(update, tuple):
-        
         if len(update) >= 2:
             dups = update[2] if len(update) == 3 else 0
             path = path_factory(update[0])
