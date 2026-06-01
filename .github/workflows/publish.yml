@@ -1,4 +1,5 @@
 name: Publish
+
 on:
   push:
     tags: ['v*.*.*']
@@ -10,64 +11,42 @@ jobs:
       matrix:
         python-version:
           - "3.10"
+          - "3.11"
+          - "3.12"
           - "3.13"
+          - "3.14"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           prune-cache: false
-
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
       - run: uv sync
       - run: echo "GNMIPY_VERSION=$(uvx dunamai from any --no-metadata --style pep440)" >> $GITHUB_ENV
-      - run: uv version ${{ env.GNMIPY_VERSION }}
-      - if: ${{ matrix.python-version == '3.9' }}
-        run: uv run --locked --group dev sh scripts/genprotos.sh
       - run: uv build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.python-version }}-${{ env.GNMIPY_VERSION }}
           path: |
             dist/*.whl
             dist/*.tar.gz
 
-  create-release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-      - uses: actions/create-release@v1
-        id: create_release
-        with:
-          draft: true
-          prerelease: false
-          release_name: release-${{ github.ref }}
-          tag_name: ${{ github.ref }}
-#          body_path: CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-#      - name: create release
-#        run: gh release create --draft --repo ${{ github.repository }} ${{ github.ref_name }} dist-*/*
-#        env:
-#          GH_TOKEN: ${{ github.token }}
-# NOTES:
-#      - run: uv build
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: release-dists-${{ matrix.python-version }}
-#          path: |
-#            dist/*.whl
-#            dist/*.tar.gz
-
-#      - name: unzip
-#      - name: Release
-#        uses: softprops/action-gh-release@v2
-#        with:
-#          files: dist/*.whl
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # create-release:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/download-artifact@v4
+  #     - uses: actions/create-release@v1
+  #       id: create_release
+  #       with:
+  #         draft: true
+  #         prerelease: false
+  #         release_name: release-${{ github.ref }}
+  #         tag_name: ${{ github.ref }}
+  #       env:
+  #         GITHUB_TOKEN: ${{ github.token }}
