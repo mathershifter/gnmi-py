@@ -144,12 +144,12 @@ def _new_session(ctx: click.Context) -> AsyncSession:
     )
 
 
-def _build_prefix(prefix: str, with_target: bool, target: str) -> Path | None:
+def _build_prefix(prefix: str, target: str, without_target: bool) -> Path | None:
     """Build a prefix Path, optionally injecting the session host as ``Path.target``."""
-    if not prefix and not with_target:
+    if not prefix and without_target:
         return None
     p = Path.from_str(prefix) if prefix else Path(elem=[])
-    if with_target:
+    if not without_target:
         p.target = target_factory(target).hostaddr
     return p
 
@@ -258,7 +258,7 @@ async def capabilities(ctx: click.Context) -> None:
 )
 @click.option("--prefix", default="", help="path prefix")
 @click.option(
-    "--prefix-target",
+    "--no-prefix-target",
     is_flag=True,
     default=False,
     help="set the prefix path's target field to the session host",
@@ -273,10 +273,14 @@ async def capabilities(ctx: click.Context) -> None:
 @click.pass_context
 @async_command
 async def get(
-    ctx: click.Context, paths, encoding, prefix, prefix_target, get_type
+    ctx: click.Context, paths, encoding, prefix, no_prefix_target, get_type
 ) -> None:
     """Fetch a snapshot for one or more paths."""
-    prefix_path = _build_prefix(prefix, prefix_target, ctx.obj["target"])
+    prefix_path = _build_prefix(
+        prefix,
+        ctx.obj["target"],
+        no_prefix_target,
+    )
     fmt = ctx.obj["format"]
 
     async with _new_session(ctx) as sess:
@@ -303,7 +307,7 @@ async def get(
 )
 @click.option("--prefix", default="", help="path prefix")
 @click.option(
-    "--prefix-target",
+    "--no-prefix-target",
     is_flag=True,
     default=False,
     help="set the prefix path's target field to the session host",
@@ -345,7 +349,7 @@ async def subscribe(
     paths,
     encoding,
     prefix,
-    prefix_target,
+    no_prefix_target,
     mode,
     submode,
     interval,
@@ -357,7 +361,7 @@ async def subscribe(
 ) -> None:
     """Subscribe to updates for one or more paths."""
 
-    prefix_path = _build_prefix(prefix, prefix_target, ctx.obj["target"])
+    prefix_path = _build_prefix(prefix, ctx.obj["target"], no_prefix_target)
     format = ctx.obj["format"]
 
     def _ns(d: str) -> int:
