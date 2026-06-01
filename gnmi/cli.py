@@ -15,7 +15,7 @@ sections like ``[subscribe]`` feed the matching subcommand.
 """
 
 import asyncio
-import os
+import enum
 import pathlib
 from importlib.metadata import version
 from functools import wraps
@@ -34,11 +34,8 @@ from gnmi.formatters.pretty import PrettyCapabilities, PrettyNotification
 from gnmi.formatters.streams import StreamingNotification
 from gnmi.formatters.json import JsonNotification, JsonCapabilities
 from gnmi.tls import TLSConfig
+from gnmi._env import env
 
-
-GNMIRC_PATH = os.environ.get("GNMIRC_PATH", pathlib.Path.home())
-# Always TOML. Distinct from --config FILE (which overrides rc defaults).
-GNMIRC_FILENAMES = (".gnmirc", "_gnmirc")
 # ---------------------------------------------------------------------------
 # Version string and shared option groups
 # ---------------------------------------------------------------------------
@@ -77,30 +74,18 @@ def _config_provider(file_path: str, cmd_name: str) -> dict:
 # load_rc — provides alternate defaults, auto-loaded from ~/.gnmirc
 # ---------------------------------------------------------------------------
 def load_rc() -> dict:
-    """Return the rc-file contents as a click ``default_map`` dict.
-
-    Searches ``~/.gnmirc`` then ``~/_gnmirc``. Returns an empty dict when
-    no rc file exists. The rc layer feeds *defaults*; the ``--config``
-    option (YAML or TOML) overrides them; explicit command-line flags
-    override both.
-    """
-    home = pathlib.Path(GNMIRC_PATH)
-    for name in GNMIRC_FILENAMES:
-        path = home / name
-        if path.exists():
-            with open(path, "r") as fh:
-                return toml.load(fh) or {}
+    """Return the rc-file contents as a click ``default_map`` dict."""
+    try:
+        with open(env.GNMIP_RC_PATH, "r") as fh:
+            return toml.load(fh) or {}
+    except FileNotFoundError:
+        pass
     return {}
 
 
 # ---------------------------------------------------------------------------
 # Common option helpers
 # ---------------------------------------------------------------------------
-
-ENCODINGS = ["json", "bytes", "proto", "ascii", "json-ietf"]
-
-FORMATTERS = ["pretty", "json", "jsonl", "yaml"]
-
 
 def _build_tls_config(
     ca: str, cert: str, key: str, get_target_certs: bool, no_verify: bool
@@ -117,7 +102,7 @@ def _build_tls_config(
 
 
 def _new_session(ctx: click.Context) -> AsyncSession:
-    """Build an AsyncSession from the click group's parsed options."""
+    """Build an AsyncSession from the click group's parsed options."""# Debugging statement to inspect context
     o = ctx.obj
     metadata: dict[str, str] = {}
     if o["username"]:
@@ -159,12 +144,25 @@ def async_command(f):
     def wrapper(*args, **kwargs):
         try:
             return asyncio.run(f(*args, **kwargs))
-        except asyncio.CancelledError:
-            print("Task was aborted/canceled.")
+        except asyncio.CancelledError as e:
+            print(f"Task was aborted/canceled: {e}")
         except KeyboardInterrupt:
             print("\nInterrupted.")
 
     return wrapper
+
+class Encoding(enum.Enum):
+    JSON = "json"
+    BYTES = "bytes"
+    PROTO = "proto"
+    ASCII = "ascii"
+    JSON_IETF = "json-ietf"
+
+class Formatter(enum.Enum):
+    PRETTY = "pretty"
+    JSON = "json"
+    JSONL = "jsonl"
+    YAML = "yaml"
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +175,7 @@ def async_command(f):
 @click.option(
     "--target",
     "-t",
-    default="",
+    default=env.GNMIP_TARGET,
     help="gNMI target address (host:port). Can also be set via the config file.",
 )
 @click.option(
@@ -189,30 +187,30 @@ def async_command(f):
 )
 @click.option(
     "--format",
-    default="pretty",
-    type=click.Choice(FORMATTERS),
+    default=Formatter(env.GNMIP_FORMAT.lower()),
+    type=click.Choice(Formatter, case_sensitive=False),
     help="output format (json, yaml, etc.)",
 )
-@click.option("--tls-ca", default="", type=click.Path(), help="certificate authority")
-@click.option("--tls-cert", default="", type=click.Path(), help="client certificate")
-@click.option("--tls-key", default="", type=click.Path(), help="client key")
+@click.option("--tls-ca", default=env.GNMIP_TLS_CA, type=click.Path(), help="certificate authority")
+@click.option("--tls-cert", default=env.GNMIP_TLS_CERT, type=click.Path(), help="client certificate")
+@click.option("--tls-key", default=env.GNMIP_TLS_KEY, type=click.Path(), help="client key")
 @click.option(
     "--tls-get-target-certificate",
     is_flag=True,
-    default=False,
+    default=env.GNMIP_TLS_GET_TARGET_CERTIFICATE,
     help="fetch and validate the target's TLS cert before opening the gRPC channel",
 )
 @click.option(
     "--tls-no-verify",
     is_flag=True,
-    default=False,
+    default=env.GNMIP_TLS_NO_VERIFY,
     help="disable TLS certificate verification",
 )
-@click.option("--insecure", is_flag=True, default=False, help="disable TLS")
-@click.option("--host-override", default="", help="override gRPC server hostname (SNI)")
-@click.option("--debug-grpc", is_flag=True, default=False, help="enable gRPC debugging")
-@click.option("-u", "--username", default="", help="username metadata")
-@click.option("-p", "--password", default="", help="password metadata")
+@click.option("--insecure", is_flag=True, default=env.GNMIP_INSECURE, help="disable TLS")
+@click.option("--host-override", default=env.GNMIP_HOST_OVERRIDE, help="override gRPC server hostname (SNI)")
+@click.option("--debug-grpc", is_flag=True, default=env.GNMIP_DEBUG_GRPC, help="enable gRPC debugging")
+@click.option("-u", "--username", default=env.GNMIP_USER, help="username metadata")
+@click.option("-p", "--password", default=env.GNMIP_PASS, help="password metadata")
 @click_config_file.configuration_option(
     cmd_name="gnmip",
     provider=_config_provider,
@@ -227,7 +225,7 @@ def cli(ctx: click.Context, **kwargs) -> None:
 
     # The --json flag is a shorthand for --format json, for convenience and backwards compatibility.
     if kwargs["json"]:
-        kwargs["format"] = "json"
+        kwargs["format"] = Formatter.JSON
         del kwargs["json"]
 
     ctx.ensure_object(dict).update(kwargs)
@@ -242,7 +240,7 @@ async def capabilities(ctx: click.Context) -> None:
 
     async with _new_session(ctx) as sess:
         cap = await sess.capabilities()
-        if fmt == "pretty":
+        if fmt == Formatter.PRETTY:
             PrettyCapabilities().send(cap)
         else:
             JsonCapabilities().send(cap)
@@ -252,7 +250,7 @@ async def capabilities(ctx: click.Context) -> None:
 @click.argument("paths", nargs=-1)
 @click.option(
     "--encoding",
-    type=click.Choice(ENCODINGS),
+    type=click.Choice(Encoding, case_sensitive=False),
     default="json",
     show_default=True,
 )
@@ -287,11 +285,11 @@ async def get(
         rsp = await sess.get(
             paths=[p for p in paths],
             prefix=prefix_path,
-            encoding=encoding,
+            encoding=encoding.value,
             data_type=get_type,
         )
         for notif in rsp.notifications:
-            if fmt == "pretty":
+            if fmt == Formatter.PRETTY:
                 PrettyNotification().send(notif)
             else:
                 JsonNotification().send(notif)
@@ -301,7 +299,7 @@ async def get(
 @click.argument("paths", nargs=-1)
 @click.option(
     "--encoding",
-    type=click.Choice(ENCODINGS),
+    type=click.Choice(Encoding, case_sensitive=False),
     default="json",
     show_default=True,
 )
@@ -359,10 +357,9 @@ async def subscribe(
     qos,
     detail,
 ) -> None:
-    """Subscribe to updates for one or more paths."""
-
+    """Subscribe to updates for one or more paths.""" # Debugging statement to inspect paths
     prefix_path = _build_prefix(prefix, ctx.obj["target"], no_prefix_target)
-    format = ctx.obj["format"]
+    fmt = ctx.obj["format"]
 
     def _ns(d: str) -> int:
         return util.parse_duration(d) if d else 0
@@ -383,7 +380,7 @@ async def subscribe(
             async for resp in sess.subscribe(
                 subscriptions=subs,
                 prefix=prefix_path,
-                encoding=encoding,
+                encoding=encoding.value,
                 mode=mode,
                 qos=qos,
                 aggregate=aggregate,
@@ -394,7 +391,7 @@ async def subscribe(
                     continue
                 # PrettyNotification().send(resp.update)
 
-                if format == "pretty":
+                if fmt == Formatter.PRETTY:
                     if detail:
                         PrettyNotification().send(resp.update)
                     else:

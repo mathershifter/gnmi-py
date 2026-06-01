@@ -5,11 +5,11 @@ from typing import Any
 
 from gnmi import capabilities, get, replace, update, subscribe
 from gnmi.models import CapabilityResponse, Update, Path
-from tests.conftest import GNMI_AUTH, GNMI_TARGET, requires_live_target
-
+from tests.conftest import requires_live_target
+from gnmi._env import env
 
 def test_cap(target, is_insecure, tlsconfig):
-    response = capabilities(target, insecure=is_insecure, tls=tlsconfig, auth=GNMI_AUTH)
+    response = capabilities(target, insecure=is_insecure, tls=tlsconfig, auth=(env.GNMIP_USER, env.GNMIP_PASS))
 
     assert isinstance(response, CapabilityResponse), "Invalid response"
 
@@ -20,7 +20,7 @@ def test_get(target, is_insecure, tlsconfig):
         paths=["/system/config/hostname"],
         insecure=is_insecure,
         tls=tlsconfig,
-        auth=GNMI_AUTH,
+        auth=(env.GNMIP_USER, env.GNMIP_PASS),
     )
 
     for notif in resp:
@@ -35,7 +35,7 @@ def test_subscribe(target, is_insecure, tlsconfig):
         paths=["/system/processes/process", "/interfaces/interface"],
         insecure=is_insecure,
         tls=tlsconfig,
-        auth=GNMI_AUTH,
+        auth=(env.GNMIP_USER, env.GNMIP_PASS),
         mode="once",
         timeout=2,
     )
@@ -53,7 +53,6 @@ def test_subscribe(target, is_insecure, tlsconfig):
 
             elif isinstance(u, Path):
                 ...
-                # print(f"DELETED: {path}")
 
     assert "/system/processes/process" in seen.keys()
     assert "/interfaces/interface" in seen.keys()
@@ -67,7 +66,7 @@ def test_set(target, is_insecure, tlsconfig, request):
             ["/system/config/hostname"],
             insecure=is_insecure,
             tls=tlsconfig,
-            auth=GNMI_AUTH,
+            auth=(env.GNMIP_USER, env.GNMIP_PASS),
         )
 
         for notif in resp:
@@ -82,11 +81,11 @@ def test_set(target, is_insecure, tlsconfig, request):
         hostname_ = _get_hostname()
         if hostname_ != hostname:
             update(
-                GNMI_TARGET,
+                env.GNMIP_TARGET,
                 updates=[("/system/config/hostname", hostname)],
                 insecure=is_insecure,
                 tls=tlsconfig,
-                auth=GNMI_AUTH,
+                auth=(env.GNMIP_USER, env.GNMIP_PASS),
             )
 
     request.addfinalizer(_rollback)
@@ -97,7 +96,7 @@ def test_set(target, is_insecure, tlsconfig, request):
         updates=updates,
         insecure=is_insecure,
         tls=tlsconfig,
-        auth=GNMI_AUTH,
+        auth=(env.GNMIP_USER, env.GNMIP_PASS),
     )
     for _ in gen.responses:
         pass
@@ -108,7 +107,7 @@ def test_set(target, is_insecure, tlsconfig, request):
         replacements=replacements,
         insecure=is_insecure,
         tls=tlsconfig,
-        auth=GNMI_AUTH,
+        auth=(env.GNMIP_USER, env.GNMIP_PASS),
     )
 
     for _ in gen.responses:

@@ -8,20 +8,12 @@ import grpc
 from gnmi.proto import gnmi_pb2 as pb
 from gnmi.proto import gnmi_pb2_grpc
 from gnmi.session import TLSConfig
-
-GNMI_INSECURE: bool = True if os.environ.get("GNMI_INSECURE") else False
-GNMI_TARGET: str = os.environ.get("GNMI_TARGET", "")
-GNMI_USER: str = os.environ.get("GNMI_USER", "admin")
-GNMI_PASS: str = os.environ.get("GNMI_PASS", "")
-GNMI_ROOT_CERT: str = os.environ.get("GNMI_ROOT_CERT", "/dev/null")
-GNMI_PRIVAE_KEY: str = os.environ.get("GNMI_PRIVAE_KEY", "/dev/null")
-GNMI_CERT_CHAIN: str = os.environ.get("GNMI_CERT_CHAIN", "/dev/null")
-GNMI_AUTH: tuple[str, str] = (GNMI_USER, GNMI_PASS)
+from gnmi._env import env
 
 # When no live gNMI device is provided, fall back to the in-process stub
 # server below. Tests that fundamentally need a real device (state
 # mutation, deadline-driven streaming) should gate on HAS_LIVE_TARGET.
-HAS_LIVE_TARGET: bool = bool(GNMI_TARGET)
+HAS_LIVE_TARGET: bool = bool(env.GNMIP_TARGET)
 
 requires_live_target = pytest.mark.skipif(
     not HAS_LIVE_TARGET,
@@ -214,7 +206,7 @@ def stub_target(stub_server) -> str:
 @pytest.fixture
 def target(request) -> str:
     if HAS_LIVE_TARGET:
-        return GNMI_TARGET
+        return env.GNMIP_TARGET
     return request.getfixturevalue("stub_server").target
 
 
@@ -222,11 +214,11 @@ def target(request) -> str:
 def tlsconfig() -> TLSConfig | None:
     if not HAS_LIVE_TARGET:
         return None
-    with open(GNMI_ROOT_CERT, "r") as fh:
+    with open(env.GNMIP_TLS_CA, "r") as fh:
         root_cert = fh.read().encode()
-    with open(GNMI_CERT_CHAIN) as fh:
+    with open(env.GNMIP_TLS_CERT) as fh:
         client_cert = fh.read().encode()
-    with open(GNMI_PRIVAE_KEY) as fh:
+    with open(env.GNMIP_TLS_KEY) as fh:
         client_key = fh.read().encode()
 
     return TLSConfig(
@@ -240,4 +232,4 @@ def tlsconfig() -> TLSConfig | None:
 def is_insecure() -> bool:
     if not HAS_LIVE_TARGET:
         return True
-    return GNMI_INSECURE
+    return env.GNMIP_INSECURE

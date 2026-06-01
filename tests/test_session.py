@@ -2,15 +2,11 @@ import os
 
 import pytest
 
-from tests.conftest import (
-    GNMI_PASS,
-    GNMI_USER,
-    requires_live_target,
-)
-
+from tests.conftest import requires_live_target
 from gnmi.session import Session
 import grpc
 from gnmi.models import Update, Path
+from gnmi._env import env
 
 GNMI_PATHS = os.environ.get("GNMI_PATHS", "/system/config;/system/memory/state")
 
@@ -22,7 +18,7 @@ def paths():
 
 @pytest.fixture()
 def session(target, tlsconfig, is_insecure):
-    metadata = {"username": GNMI_USER, "password": GNMI_PASS}
+    metadata = {"username": env.GNMIP_USER, "password": env.GNMIP_PASS}
     return Session(target, insecure=is_insecure, tls=tlsconfig, metadata=metadata)
 
 

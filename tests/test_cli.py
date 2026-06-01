@@ -9,7 +9,7 @@ from click.testing import CliRunner
 
 from gnmi import cli as cli_mod
 from gnmi.cli import cli, format_version, load_rc
-
+from gnmi._env import env
 
 # ---------------------------------------------------------------------------
 # format_version (used by --version)
@@ -102,6 +102,7 @@ def test_cli_subscribe_against_stub(stub_server):
         ],
     )
     assert result.exit_code == 0, result.output
+    print(f"Result output: {result.output}")
     payload = json.loads(result.output.strip().splitlines()[0])
     assert payload["updates"][0]["path"] == "/a"
 
@@ -133,13 +134,13 @@ def test_cli_username_metadata_propagates(stub_server):
 
 
 def test_load_rc_returns_empty_when_no_file(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli_mod, "GNMIRC_PATH", str(tmp_path))
+    monkeypatch.setattr(env, "GNMIP_RC_PATH", tmp_path / "nonexistent")
     assert load_rc() == {}
 
 
 def test_load_rc_reads_dot_gnmirc_toml(monkeypatch, tmp_path):
     (tmp_path / ".gnmirc").write_text('insecure = true\n\n[subscribe]\nmode = "once"\n')
-    monkeypatch.setattr(cli_mod, "GNMIRC_PATH", str(tmp_path))
+    monkeypatch.setattr(env, "GNMIP_RC_PATH", tmp_path / ".gnmirc")
     assert load_rc() == {
         "insecure": True,
         "subscribe": {"mode": "once"},
@@ -149,7 +150,7 @@ def test_load_rc_reads_dot_gnmirc_toml(monkeypatch, tmp_path):
 def test_load_rc_prefers_dot_gnmirc_over_underscore(monkeypatch, tmp_path):
     (tmp_path / "_gnmirc").write_text("insecure = false\n")
     (tmp_path / ".gnmirc").write_text("insecure = true\n")
-    monkeypatch.setattr(cli_mod, "GNMIRC_PATH", str(tmp_path))
+    monkeypatch.setattr(env, "GNMIP_RC_PATH", tmp_path / ".gnmirc")
     assert load_rc()["insecure"] is True
 
 

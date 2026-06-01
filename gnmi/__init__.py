@@ -14,8 +14,10 @@ from gnmi.session import Session, BasicAuth
 from gnmi.async_session import AsyncSession
 from gnmi.tls import TLSConfig, get_server_certificate
 from gnmi.api import capabilities, delete, get, replace, subscribe, update
+from gnmi._env import env
 
 __all__ = [
+    "env",
     "BasicAuth",
     "AsyncSession",
     "Session",

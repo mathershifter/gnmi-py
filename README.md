@@ -69,7 +69,7 @@ gnmip --insecure -u admin -t localhost:6030 subscribe /system | \
 ### `~/.gnmirc`
 
 `gnmip` reads `~/.gnmirc` (or `~/_gnmirc`) if present. Override the
-search directory with `GNMIRC_PATH`. The file is **TOML** and matches
+search directory with `GNMIP_RC_PATH`. The file is **TOML** and matches
 the shape of the `Config` model in `gnmi/config.py`. Example:
 
 ```toml

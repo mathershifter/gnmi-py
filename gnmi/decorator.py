@@ -5,8 +5,7 @@ import warnings
 import functools
 
 from gnmi.exceptions import GnmiDeprecationError
-
-GNMI_NO_DEPRECATED = True if os.environ.get("GNMI_NO_DEPRECATED") else False
+from gnmi._env import env
 
 warnings.simplefilter("once", category=PendingDeprecationWarning)
 warnings.simplefilter("once", category=DeprecationWarning)
@@ -19,7 +18,7 @@ def deprecated(msg, cls=DeprecationWarning):
 
             @functools.wraps(orig_init)
             def __init__(self, *args, **kwargs):
-                if GNMI_NO_DEPRECATED:
+                if env.GNMIP_NO_DEPRECATED:
                     raise GnmiDeprecationError(msg)
                 warnings.warn(msg, cls, stacklevel=2)
                 orig_init(self, *args, **kwargs)
@@ -29,7 +28,7 @@ def deprecated(msg, cls=DeprecationWarning):
 
         @functools.wraps(target)
         def wrapper(*args, **kwargs):
-            if GNMI_NO_DEPRECATED:
+            if env.GNMIP_NO_DEPRECATED:
                 raise GnmiDeprecationError(msg)
             warnings.warn(msg, cls, stacklevel=2)
             return target(*args, **kwargs)
