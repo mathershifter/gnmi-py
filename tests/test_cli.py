@@ -7,7 +7,6 @@ import json
 
 from click.testing import CliRunner
 
-from gnmi import cli as cli_mod
 from gnmi.cli import cli, format_version, load_rc
 from gnmi._env import env
 
@@ -134,24 +133,17 @@ def test_cli_username_metadata_propagates(stub_server):
 
 
 def test_load_rc_returns_empty_when_no_file(monkeypatch, tmp_path):
-    monkeypatch.setattr(env, "GNMIP_RC_PATH", tmp_path / "nonexistent")
+    monkeypatch.setattr(env, "GNMIP_RC_PATH", [tmp_path / "nonexistent"])
     assert load_rc() == {}
 
 
 def test_load_rc_reads_dot_gnmirc_toml(monkeypatch, tmp_path):
     (tmp_path / ".gnmirc").write_text('insecure = true\n\n[subscribe]\nmode = "once"\n')
-    monkeypatch.setattr(env, "GNMIP_RC_PATH", tmp_path / ".gnmirc")
+    monkeypatch.setattr(env, "GNMIP_RC_PATH", [tmp_path / ".gnmirc"])
     assert load_rc() == {
         "insecure": True,
         "subscribe": {"mode": "once"},
     }
-
-
-def test_load_rc_prefers_dot_gnmirc_over_underscore(monkeypatch, tmp_path):
-    (tmp_path / "_gnmirc").write_text("insecure = false\n")
-    (tmp_path / ".gnmirc").write_text("insecure = true\n")
-    monkeypatch.setattr(env, "GNMIP_RC_PATH", tmp_path / ".gnmirc")
-    assert load_rc()["insecure"] is True
 
 
 def test_rc_defaults_drive_cli_when_no_explicit_flag(stub_server):

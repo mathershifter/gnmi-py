@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Iterable, AsyncIterable, Sequence
+from typing import Iterable, AsyncGenerator, AsyncIterable, Sequence
 
 from gnmi.tls import TLSConfig
 from gnmi.session import Session, BasicAuth
@@ -171,7 +171,7 @@ async def aget(
     insecure: bool = False,
     tls: TLSConfig | None = None,
     override: str = "",
-) -> AsyncIterable[Notification]:
+) -> AsyncGenerator[Notification, None]:
     """
     Async get path(s) from target
 

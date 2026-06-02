@@ -16,7 +16,6 @@ sections like ``[subscribe]`` feed the matching subcommand.
 
 import asyncio
 import enum
-import pathlib
 from importlib.metadata import version
 from functools import wraps
 import click
@@ -42,11 +41,7 @@ from gnmi._env import env
 
 
 def format_version() -> str:
-    return "gnmip %s [protobuf %s, grpcio %s]" % (
-        version("gnmi"),
-        grpc_version,
-        version("protobuf"),
-    )
+    return f"gnmip {version('gnmi')} [protobuf {version('protobuf')}, grpcio {grpc_version}]"
 
 
 def _toml_provider(file_path: str, _cmd_name: str) -> dict:
@@ -75,11 +70,9 @@ def _config_provider(file_path: str, cmd_name: str) -> dict:
 # ---------------------------------------------------------------------------
 def load_rc() -> dict:
     """Return the rc-file contents as a click ``default_map`` dict."""
-    try:
-        with open(env.GNMIP_RC_PATH, "r") as fh:
-            return toml.load(fh) or {}
-    except FileNotFoundError:
-        pass
+    for p in env.GNMIP_RC_PATH:
+        if p.is_file():
+            return _config_provider(str(p), "gnmip")
     return {}
 
 
@@ -87,22 +80,33 @@ def load_rc() -> dict:
 # Common option helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_tls_config(
     ca: str, cert: str, key: str, get_target_certs: bool, no_verify: bool
 ) -> TLSConfig | None:
-    if not (ca or cert or key or get_target_certs):
-        return None
+    ca_cert = client_cert = client_key = None
+    
+    if ca:
+        with open(ca, "rb") as f:
+            ca_cert = f.read() if ca else None
+    if cert:
+        with open(cert, "rb") as f:
+            client_cert = f.read() if cert else None
+    if key:
+        with open(key, "rb") as f:
+            client_key = f.read() if key else None
+
     return TLSConfig(
-        ca_cert=open(ca, "rb").read() if ca else None,
-        client_cert=open(cert, "rb").read() if cert else None,
-        client_key=open(key, "rb").read() if key else None,
+        ca_cert=ca_cert,
+        client_cert=client_cert,
+        client_key=client_key,
         get_server_cert=get_target_certs,
         no_verify=no_verify,
     )
 
 
 def _new_session(ctx: click.Context) -> AsyncSession:
-    """Build an AsyncSession from the click group's parsed options."""# Debugging statement to inspect context
+    """Build an AsyncSession from the click group's parsed options."""  # Debugging statement to inspect context
     o = ctx.obj
     metadata: dict[str, str] = {}
     if o["username"]:
@@ -151,12 +155,14 @@ def async_command(f):
 
     return wrapper
 
+
 class Encoding(enum.Enum):
     JSON = "json"
     BYTES = "bytes"
     PROTO = "proto"
     ASCII = "ascii"
     JSON_IETF = "json-ietf"
+
 
 class Formatter(enum.Enum):
     PRETTY = "pretty"
@@ -191,9 +197,28 @@ class Formatter(enum.Enum):
     type=click.Choice(Formatter, case_sensitive=False),
     help="output format (json, yaml, etc.)",
 )
-@click.option("--tls-ca", default=env.GNMIP_TLS_CA, type=click.Path(), help="certificate authority")
-@click.option("--tls-cert", default=env.GNMIP_TLS_CERT, type=click.Path(), help="client certificate")
-@click.option("--tls-key", default=env.GNMIP_TLS_KEY, type=click.Path(), help="client key")
+@click.option(
+    "--rc-path",
+    multiple=True,
+    default=env.GNMIP_RC_PATH,
+    type=list[click.Path],
+    help="Path to the gNMI config file",
+)
+@click.option(
+    "--tls-ca",
+    default=env.GNMIP_TLS_CA,
+    type=click.Path(),
+    help="certificate authority",
+)
+@click.option(
+    "--tls-cert",
+    default=env.GNMIP_TLS_CERT,
+    type=click.Path(),
+    help="client certificate",
+)
+@click.option(
+    "--tls-key", default=env.GNMIP_TLS_KEY, type=click.Path(), help="client key"
+)
 @click.option(
     "--tls-get-target-certificate",
     is_flag=True,
@@ -206,9 +231,20 @@ class Formatter(enum.Enum):
     default=env.GNMIP_TLS_NO_VERIFY,
     help="disable TLS certificate verification",
 )
-@click.option("--insecure", is_flag=True, default=env.GNMIP_INSECURE, help="disable TLS")
-@click.option("--host-override", default=env.GNMIP_HOST_OVERRIDE, help="override gRPC server hostname (SNI)")
-@click.option("--debug-grpc", is_flag=True, default=env.GNMIP_DEBUG_GRPC, help="enable gRPC debugging")
+@click.option(
+    "--insecure", is_flag=True, default=env.GNMIP_INSECURE, help="disable TLS"
+)
+@click.option(
+    "--host-override",
+    default=env.GNMIP_HOST_OVERRIDE,
+    help="override gRPC server hostname (SNI)",
+)
+@click.option(
+    "--debug-grpc",
+    is_flag=True,
+    default=env.GNMIP_DEBUG_GRPC,
+    help="enable gRPC debugging",
+)
 @click.option("-u", "--username", default=env.GNMIP_USER, help="username metadata")
 @click.option("-p", "--password", default=env.GNMIP_PASS, help="password metadata")
 @click_config_file.configuration_option(
@@ -357,7 +393,7 @@ async def subscribe(
     qos,
     detail,
 ) -> None:
-    """Subscribe to updates for one or more paths.""" # Debugging statement to inspect paths
+    """Subscribe to updates for one or more paths."""  # Debugging statement to inspect paths
     prefix_path = _build_prefix(prefix, ctx.obj["target"], no_prefix_target)
     fmt = ctx.obj["format"]
 

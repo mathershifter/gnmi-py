@@ -90,10 +90,6 @@ class Session:
             trusted_cert = get_server_certificate(
                 self.target, self._tls.context, pem=True
             )
-            creds = ssl_channel_credentials(root_certificates=trusted_cert)
-            return secure_channel(
-                str(self.target), creds, options=list(self._grpc_options)
-            )
 
         creds = ssl_channel_credentials(
             root_certificates=trusted_cert,

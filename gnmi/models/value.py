@@ -83,6 +83,8 @@ class ValueType(enum.Enum):
 
     @classmethod
     def from_val(cls, v: Any) -> "ValueType":
+        if isinstance(v, bool):
+            return ValueType.BOOL_VAL
         if isinstance(v, str):
             return ValueType.STRING_VAL
         if isinstance(v, int):
@@ -91,8 +93,6 @@ class ValueType(enum.Enum):
             return ValueType.FLOAT_VAL
         if isinstance(v, Decimal):
             return ValueType.DECIMAL_VAL
-        if isinstance(v, bool):
-            return ValueType.BOOL_VAL
         if isinstance(v, bytes):
             return ValueType.BYTES_VAL
         if isinstance(v, list):
@@ -154,7 +154,7 @@ class Value(Generic[T], BaseModel[pb.TypedValue]):
         elif isinstance(v, list):
             return [i.to_json() for i in v]
         elif isinstance(v, dict):
-            return {k: v.to_json() for k, v in v.items()}
+            return {k: x.to_json() for k, x in v.items()}
         elif isinstance(v, (str, int, float, bool)) or v is None:
             return v
         elif isinstance(v, Decimal):

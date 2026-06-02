@@ -143,7 +143,7 @@ class PathDescriptor:
 
     def __set__(self, inst, value: None | PathLike):
         if value is None:
-            return None
+            return setattr(inst, self._name, None)
         setattr(inst, self._name, path_factory(value))
 
 

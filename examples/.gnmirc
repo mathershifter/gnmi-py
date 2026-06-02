@@ -1,17 +1,13 @@
-metadata:
-    username: admin
-    password: ""
+# This file is used for testing the loading of configuration from a .gnmirc file.
+username = "admin"
+password = ""
 
-get:
-    oencoding: json
+[get]
+encoding = "json"
 
-subscribe:
-    aggregate: false
-    encoding: json
-    mode: stream
-    submode: on-change
-    suppress: true
-    # qos: 0 
-    # interval:
-    # heartbeat:
-    # timeout:
+[subscribe]
+aggregate = false
+encoding = "json"
+mode = "stream"
+submode = "on-change"
+suppress = true

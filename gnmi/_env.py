@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
-"""
-"""
-
-from dataclasses import dataclass, fields, MISSING
+""" """
+import re
+from dataclasses import dataclass, fields, field, MISSING
 from pathlib import Path
 import os
 
+
 @dataclass
-class Env: #(NamedTuple):
-    GNMIP_RC_PATH: Path =  Path.home() / ".gnmirc"
+class Env:
+    GNMIP_RC_PATH: list[Path] = field(default_factory=lambda: [Path.home() / ".gnmirc"])
     GNMIP_TARGET: str = ""
     GNMIP_USER: str = "admin"
     GNMIP_PASS: str = ""
@@ -24,20 +24,46 @@ class Env: #(NamedTuple):
     GNMIP_TLS_NO_VERIFY: bool = False
     GNMIP_FORMAT: str = "pretty"
 
+def _coerce_bool(val):
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() in ("yes", "true", "t", "1")
+    return bool(val)
+
+def _coerce_list(val, default: list[str] = []):
+    if isinstance(val, list):
+        return val
+    if isinstance(val, str):
+        typ = type(default[0]) if default else str
+        return [_coerce_type(v.strip(), typ) for v in re.split(r"(,:)", val) if v.strip()]
+    return list(val)
+
+def _coerce_type(val, typ: type):
+    if typ == bool:
+        return _coerce_bool(val)
+    elif typ == list:
+        return _coerce_list(val)
+    elif val is not None and typ is not None:
+        return typ(val)
+    return val
+
 def _load() -> Env:
     s = {}
     for f in fields(Env):
         default = None
         if f.default is not MISSING:
             default = f.default
-        
+
         elif f.default_factory is not MISSING:
             default = f.default_factory()
 
-        val = os.getenv(f.name, default) 
-        if val is not None and default is not None:
-            val = type(default)(val)
+        val = os.getenv(f.name, default)
+        val = _coerce_type(val, type(default))
+
         s[f.name] = val
+    
     return Env(**s)
+
 
 env = _load()

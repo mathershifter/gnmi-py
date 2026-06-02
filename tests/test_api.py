@@ -8,8 +8,14 @@ from gnmi.models import CapabilityResponse, Update, Path
 from tests.conftest import requires_live_target
 from gnmi._env import env
 
+
 def test_cap(target, is_insecure, tlsconfig):
-    response = capabilities(target, insecure=is_insecure, tls=tlsconfig, auth=(env.GNMIP_USER, env.GNMIP_PASS))
+    response = capabilities(
+        target,
+        insecure=is_insecure,
+        tls=tlsconfig,
+        auth=(env.GNMIP_USER, env.GNMIP_PASS),
+    )
 
     assert isinstance(response, CapabilityResponse), "Invalid response"
 
