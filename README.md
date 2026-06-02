@@ -27,10 +27,10 @@ uv run pytest
 ## CLI
 
 ```text
-gnmip [-t target] [capabilities|get|subscribe] [paths ...]
+gnmip [options] -t TARGET {capabilities|get|subscribe|collector} [paths ...]
 ```
 
-Common flags:
+Global flags (before the subcommand):
 
 | flag | what it does |
 |------|--------------|
@@ -39,20 +39,37 @@ Common flags:
 | `--tls-ca PATH` | CA cert to validate the target |
 | `--tls-cert PATH` / `--tls-key PATH` | client cert / key (mTLS) |
 | `--tls-get-target-certificate` | early-validate the target cert before opening the gRPC channel |
+| `--tls-no-verify` | disable TLS certificate verification |
 | `--host-override HOST` | override the gRPC SNI / authority |
 | `-u USER` / `-p PASS` | username / password metadata |
-| `--encoding {json,bytes,proto,ascii,json-ietf}` | wire encoding |
-| `--prefix PATH` | path prefix |
+| `-j` / `--json` | shorthand for `--format json` |
+| `--format {pretty,json,jsonl,yaml}` | output format (default: `pretty`) |
+| `--rc-path PATH` | config file path(s) (default: `~/.gnmirc`) |
+| `--config FILE` | explicit YAML or TOML config file |
+| `--debug-grpc` | enable gRPC debug logging |
 
-Subscribe-only:
+Get flags (after `get`):
 
 | flag | default |
 |------|---------|
+| `--encoding {json,bytes,proto,ascii,json-ietf}` | `json` |
+| `--prefix PATH` | unset |
+| `--no-prefix-target` | off |
+| `--get-type {all,config,state,operational}` | `all` |
+
+Subscribe flags (after `subscribe`):
+
+| flag | default |
+|------|---------|
+| `--encoding {json,bytes,proto,ascii,json-ietf}` | `json` |
+| `--prefix PATH` | unset |
+| `--no-prefix-target` | off |
 | `--mode {stream,once,poll}` | `stream` |
 | `--submode {target-defined,on-change,sample}` | `target-defined` |
 | `--interval N` | `10s` (sample interval) |
 | `--heartbeat N` | unset |
 | `--aggregate` / `--suppress` / `--qos N` | off / off / 0 |
+| `--detail` | off (show full notification objects) |
 
 Examples:
 
@@ -68,30 +85,27 @@ gnmip --insecure -u admin -t localhost:6030 subscribe /system | \
 
 ### `~/.gnmirc`
 
-`gnmip` reads `~/.gnmirc` (or `~/_gnmirc`) if present. Override the
-search directory with `GNMIP_RC_PATH`. The file is **TOML** and matches
-the shape of the `Config` model in `gnmi/config.py`. Example:
+`gnmip` reads `~/.gnmirc` if present. Override the config file path(s)
+with `GNMIP_RC_PATH`. The file is **TOML** — top-level keys map to
+global CLI flags and sections map to subcommand defaults. Example:
 
 ```toml
 target = "r1.lab:6030"
 insecure = true
-
-[metadata]
 username = "admin"
 password = ""
+
+[get]
+encoding = "json"
 
 [subscribe]
 encoding = "json"
 mode = "stream"
-
-[[subscribe.subscriptions]]
-path = "/interfaces"
-mode = "on-change"
+submode = "on-change"
 ```
 
-`.toml` / `.yaml` / `.yml` files passed elsewhere via the config loader
-are dispatched by extension; the bare `.gnmirc` / `_gnmirc` names are
-always parsed as TOML.
+`.toml` / `.yaml` / `.yml` files passed via `--config` are dispatched by
+extension; `~/.gnmirc` is always parsed as TOML.
 
 ## Python API
 
@@ -183,6 +197,28 @@ with Session("r1.lab:6030", insecure=True) as sess:
 `AsyncSession.subscribe` works the same way — `async for` over the
 iterator and catch `grpc.RpcError` (which `grpc.aio.AioRpcError`
 subclasses).
+
+### Async API
+
+Async equivalents of the top-level helpers are available in `gnmi.api`:
+
+```python
+from gnmi.api import acapabilities, aget, asubscribe, adelete, areplace, aupdate
+
+async for notif in aget("localhost:6030", ["/system/config/hostname"],
+                        insecure=True, auth=("admin", "")):
+    for upd in notif.updates:
+        print(upd.path, upd.value.value)
+```
+
+These are async generators (use `async for`, not `asyncio.run()`).
+
+### Other exports
+
+- **`gnmi.env`** — `Env` dataclass populated from `GNMIP_*` environment
+  variables (target, auth, TLS, format defaults).
+- **`gnmi.get_server_certificate(target, context, pem)`** — fetch a
+  target's TLS certificate via a raw socket handshake.
 
 ## Exceptions
 
