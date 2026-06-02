@@ -43,7 +43,6 @@ def _path_key(p: pb.Path) -> bytes:
 
 
 class StubGNMIServicer(gnmi_pb2_grpc.gNMIServicer):
-
     def __init__(self):
         self.last_capability_request = None
         self.last_get_request = None

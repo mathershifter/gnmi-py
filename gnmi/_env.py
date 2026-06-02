@@ -46,9 +46,9 @@ def _coerce_list(val, default: list[str] = []):
 
 
 def _coerce_type(val, typ: type):
-    if typ == bool:
+    if typ is bool:
         return _coerce_bool(val)
-    elif typ == list:
+    elif typ is list:
         return _coerce_list(val)
     elif val is not None and typ is not None:
         return typ(val)

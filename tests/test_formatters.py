@@ -125,7 +125,9 @@ def test_json_lines_notification_send(capsys):
         ],
     )
     JsonLinesNotification().send(n)
-    lines = [l for l in capsys.readouterr().out.strip().splitlines() if l.strip()]
+    lines = [
+        line for line in capsys.readouterr().out.strip().splitlines() if line.strip()
+    ]
     assert len(lines) == 2
     parsed = json.loads(lines[0])
     assert parsed["path"] == "/a"

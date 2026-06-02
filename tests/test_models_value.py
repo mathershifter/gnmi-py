@@ -161,7 +161,7 @@ def test_legacy_value_encode():
 
 def test_legacy_value_decode():
     from gnmi.models.value import LegacyValue
-    from gnmi.models.encoding import Encoding
+
     pv = pb.Value(value=b"hello", type=0)
     lv = LegacyValue.decode(pv)
     assert lv.value == b"hello"
