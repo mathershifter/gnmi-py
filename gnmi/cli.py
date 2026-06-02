@@ -413,9 +413,8 @@ async def subscribe(
             ):
                 if resp.sync_response:
                     if mode == "once":
-                        break
+                        return
                     continue
-                # PrettyNotification().send(resp.update)
 
                 if fmt == Formatter.PRETTY:
                     if detail:
