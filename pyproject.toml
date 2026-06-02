@@ -1,6 +1,6 @@
 [project]
 name = "gnmi"
-version = "0.7.2"
+version = "0.7.3"
 maintainers = [{name = "Jesse Mather", email = "jmather@arista.com"}]
 license = "MIT"
 license-files = ["LICENSE"]
