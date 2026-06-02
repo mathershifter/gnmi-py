@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
-"""Round-trip and error-path coverage for the Subscribe models
-(AUDIT.md Testing #4, #10)."""
-
 import pytest
 
 from gnmi.proto import gnmi_pb2 as pb

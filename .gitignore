@@ -561,3 +561,5 @@ tests/assets/ca
 
 
 AUDIT.md
+# slop-detector: governance config (contains codebase complexity surface — keep private)
+.slopconfig.yaml

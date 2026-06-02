@@ -27,16 +27,12 @@ async def test_adelete(stub_server):
 
 
 async def test_areplace(stub_server):
-    resp = await areplace(
-        stub_server.target, [("/c/d", "val")], insecure=True
-    )
+    resp = await areplace(stub_server.target, [("/c/d", "val")], insecure=True)
     assert any(r.op.name == "REPLACE" for r in resp.responses)
 
 
 async def test_aupdate(stub_server):
-    resp = await aupdate(
-        stub_server.target, [("/e/f", "val")], insecure=True
-    )
+    resp = await aupdate(stub_server.target, [("/e/f", "val")], insecure=True)
     assert any(r.op.name == "UPDATE" for r in resp.responses)
 
 

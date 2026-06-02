@@ -117,7 +117,9 @@ def test_encoding_from_str():
 def test_subscription_mode_from_str():
     from gnmi.models.subscription import SubscriptionMode
 
-    assert SubscriptionMode.from_str("target-defined") == SubscriptionMode.TARGET_DEFINED
+    assert (
+        SubscriptionMode.from_str("target-defined") == SubscriptionMode.TARGET_DEFINED
+    )
     assert SubscriptionMode.from_str("on-change") == SubscriptionMode.ON_CHANGE
     assert SubscriptionMode.from_str("sample") == SubscriptionMode.SAMPLE
 

@@ -6,9 +6,7 @@ from decimal import Decimal
 import pytest
 
 from google.protobuf.any_pb2 import Any
-
 from gnmi.proto import gnmi_pb2 as pb
-
 from gnmi.models.value import ValueType, Value, Decimal64
 
 
@@ -35,11 +33,6 @@ def test_decimal():
             assert d.precision == want.precision
             assert d.digits == want.digits
             assert d.encode() == want
-
-
-# ---------------------------------------------------------------------------
-# ValueType.from_val — type inference (T4)
-# ---------------------------------------------------------------------------
 
 
 def test_value_type_from_val_bool():
@@ -77,11 +70,6 @@ def test_value_type_from_val_decimal():
 
 def test_value_type_from_val_unknown():
     assert ValueType.from_val(object()) == ValueType.ANY_VAL
-
-
-# ---------------------------------------------------------------------------
-# Value.to_json — JSON serialization (T3)
-# ---------------------------------------------------------------------------
 
 
 def test_value_to_json_string():
@@ -125,11 +113,6 @@ def test_value_to_json_unsupported_type_raises():
         Value(object(), ValueType.ANY_VAL).to_json()
 
 
-# ---------------------------------------------------------------------------
-# value_factory / ValueJsonEncoder (T9)
-# ---------------------------------------------------------------------------
-
-
 def test_value_factory_plain_value():
     from gnmi.models.value import value_factory
 
@@ -162,10 +145,26 @@ def test_value_factory_invalid_tuple_raises():
 
 def test_value_json_encoder():
     from gnmi.models.value import ValueJsonEncoder
-    import json
 
     enc = ValueJsonEncoder()
     assert enc.default(Value("x", ValueType.STRING_VAL)) == "x"
+
+
+def test_legacy_value_encode():
+    from gnmi.models.value import LegacyValue
+    from gnmi.models.encoding import Encoding
+
+    lv = LegacyValue(value=b"data", type=Encoding.JSON)
+    encoded = lv.encode()
+    assert encoded.value == b"data"
+
+
+def test_legacy_value_decode():
+    from gnmi.models.value import LegacyValue
+    from gnmi.models.encoding import Encoding
+    pv = pb.Value(value=b"hello", type=0)
+    lv = LegacyValue.decode(pv)
+    assert lv.value == b"hello"
 
 
 # ---------------------------------------------------------------------------

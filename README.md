@@ -109,7 +109,7 @@ extension; `~/.gnmirc` is always parsed as TOML.
 
 ## Python API
 
-Top-level helpers — each opens a short-lived `Session`, runs one RPC, and
+Top-level helpers — each opens a `Session`, runs one RPC, and
 closes the channel:
 
 ```python

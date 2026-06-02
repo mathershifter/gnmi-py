@@ -5,7 +5,7 @@ import json
 from gnmi.models.notification import Notification
 from gnmi.models.update import Update
 from gnmi.models.path import Path, PathElem
-from gnmi.models.value import Value, ValueType
+from gnmi.models.value import ValueType
 from gnmi.models.capabilities import CapabilityResponse
 from gnmi.models.model_data import ModelData
 from gnmi.models.encoding import Encoding
@@ -28,7 +28,9 @@ def _cap():
     return CapabilityResponse(
         gnmi_version="0.10.0",
         supported_encodings=[Encoding.JSON, Encoding.PROTO],
-        supported_models=[ModelData(name="openconfig-system", organization="OC", version="1.0")],
+        supported_models=[
+            ModelData(name="openconfig-system", organization="OC", version="1.0")
+        ],
     )
 
 

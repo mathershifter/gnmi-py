@@ -45,13 +45,11 @@ def format_version() -> str:
 
 
 def _toml_provider(file_path: str, _cmd_name: str) -> dict:
-    """click-config-file provider that reads TOML."""
     with open(file_path, "r") as fh:
         return toml.load(fh)
 
 
 def _yaml_provider(file_path: str, _cmd_name: str) -> dict:
-    """click-config-file provider that reads YAML."""
     import yaml  # type: ignore[import]
 
     with open(file_path, "r") as fh:
@@ -59,7 +57,6 @@ def _yaml_provider(file_path: str, _cmd_name: str) -> dict:
 
 
 def _config_provider(file_path: str, cmd_name: str) -> dict:
-    """Dispatch the --config FILE by extension. Defaults to TOML."""
     if file_path.endswith((".yaml", ".yml")):
         return _yaml_provider(file_path, cmd_name)
     return _toml_provider(file_path, cmd_name)
@@ -69,7 +66,6 @@ def _config_provider(file_path: str, cmd_name: str) -> dict:
 # load_rc — provides alternate defaults, auto-loaded from ~/.gnmirc
 # ---------------------------------------------------------------------------
 def load_rc() -> dict:
-    """Return the rc-file contents as a click ``default_map`` dict."""
     for p in env.GNMIP_RC_PATH:
         if p.is_file():
             return _config_provider(str(p), "gnmip")
@@ -85,7 +81,7 @@ def _build_tls_config(
     ca: str, cert: str, key: str, get_target_certs: bool, no_verify: bool
 ) -> TLSConfig | None:
     ca_cert = client_cert = client_key = None
-    
+
     if ca:
         with open(ca, "rb") as f:
             ca_cert = f.read()
@@ -106,7 +102,6 @@ def _build_tls_config(
 
 
 def _new_session(ctx: click.Context) -> AsyncSession:
-    """Build an AsyncSession from the click group's parsed options."""  # Debugging statement to inspect context
     o = ctx.obj
     metadata: dict[str, str] = {}
     if o["username"]:
@@ -134,7 +129,6 @@ def _new_session(ctx: click.Context) -> AsyncSession:
 
 
 def _build_prefix(prefix: str, target: str, without_target: bool) -> Path | None:
-    """Build a prefix Path, optionally injecting the session host as ``Path.target``."""
     if not prefix and without_target:
         return None
     p = Path.from_str(prefix) if prefix else Path(elem=[])
@@ -270,7 +264,6 @@ def cli(ctx: click.Context, **kwargs) -> None:
 @click.pass_context
 @async_command
 async def capabilities(ctx: click.Context) -> None:
-    """Discover supported models and encodings."""
     fmt = ctx.obj["format"]
 
     async with _new_session(ctx) as sess:
@@ -308,7 +301,6 @@ async def capabilities(ctx: click.Context) -> None:
 async def get(
     ctx: click.Context, paths, encoding, prefix, no_prefix_target, get_type
 ) -> None:
-    """Fetch a snapshot for one or more paths."""
     prefix_path = _build_prefix(
         prefix,
         ctx.obj["target"],
@@ -392,7 +384,6 @@ async def subscribe(
     qos,
     detail,
 ) -> None:
-    """Subscribe to updates for one or more paths."""  # Debugging statement to inspect paths
     prefix_path = _build_prefix(prefix, ctx.obj["target"], no_prefix_target)
     fmt = ctx.obj["format"]
 
@@ -443,5 +434,4 @@ async def subscribe(
 @click.pass_context
 @async_command
 async def collector(ctx: click.Context) -> None:
-    """Start a gNMI collector that listens for incoming notifications."""
-    pass
+    raise NotImplementedError("collector command is not implemented yet")

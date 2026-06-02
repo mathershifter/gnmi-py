@@ -75,7 +75,7 @@ def target_factory(value: TargetLike) -> Target:
     elif isinstance(value, str):
         host, port = _split_addr_port(value)
         return Target(hostaddr=host, port=port)
-    
+
     raise TypeError(f"Invalid target value: {value}")
 
 

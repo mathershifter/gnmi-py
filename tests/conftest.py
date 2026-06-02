@@ -21,15 +21,9 @@ requires_live_target = pytest.mark.skipif(
 
 
 # ---------------------------------------------------------------------------
-# In-process gNMI stub server (AUDIT.md Testing #1)
+# In-process gNMI stub server
 # ---------------------------------------------------------------------------
-#
-# Lets Session.* and api.* exercise real gRPC plumbing in CI, instead of
-# silently skipping every assertion when GNMI_TARGET is unset. The stub is
-# intentionally minimal: just enough behavior to round-trip the four RPCs
-# and serve as the default backend for `target` / `tlsconfig` /
-# `is_insecure` when no live target is configured. Tests can substitute
-# their own handlers via ``stub_server.servicer.*``.
+
 
 STUB_GNMI_VERSION = "0.10.0-stub"
 STUB_HOSTNAME = "stub-target"
@@ -49,15 +43,6 @@ def _path_key(p: pb.Path) -> bytes:
 
 
 class StubGNMIServicer(gnmi_pb2_grpc.gNMIServicer):
-    """Programmable gNMI servicer.
-
-    Each RPC handler is a swappable callable so tests can install bespoke
-    behavior (errors, custom payloads, streams) without subclassing.
-
-    The default Get/Set handlers maintain a tiny in-memory key/value store
-    keyed by serialized Path, which is enough for the existing
-    test_api.py / test_session.py round-trips to pass against the stub.
-    """
 
     def __init__(self):
         self.last_capability_request = None
@@ -192,14 +177,6 @@ def stub_server():
 @pytest.fixture
 def stub_target(stub_server) -> str:
     return stub_server.target
-
-
-# ---------------------------------------------------------------------------
-# Backend-agnostic fixtures
-# ---------------------------------------------------------------------------
-# With GNMI_TARGET set: use the real device and the user's TLS material.
-# Without: spin up the stub server and run insecure against it. Tests that
-# need behaviors the stub can't reproduce should use @requires_live_target.
 
 
 @pytest.fixture
