@@ -88,13 +88,13 @@ def _build_tls_config(
     
     if ca:
         with open(ca, "rb") as f:
-            ca_cert = f.read() if ca else None
+            ca_cert = f.read()
     if cert:
         with open(cert, "rb") as f:
-            client_cert = f.read() if cert else None
+            client_cert = f.read()
     if key:
         with open(key, "rb") as f:
-            client_key = f.read() if key else None
+            client_key = f.read()
 
     return TLSConfig(
         ca_cert=ca_cert,
@@ -201,7 +201,6 @@ class Formatter(enum.Enum):
     "--rc-path",
     multiple=True,
     default=env.GNMIP_RC_PATH,
-    type=list[click.Path],
     help="Path to the gNMI config file",
 )
 @click.option(

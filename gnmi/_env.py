@@ -36,7 +36,7 @@ def _coerce_list(val, default: list[str] = []):
         return val
     if isinstance(val, str):
         typ = type(default[0]) if default else str
-        return [_coerce_type(v.strip(), typ) for v in re.split(r"(,:)", val) if v.strip()]
+        return [_coerce_type(v.strip(), typ) for v in re.split(r"[,|:]", val) if v.strip()]
     return list(val)
 
 def _coerce_type(val, typ: type):

@@ -21,7 +21,7 @@ class DataType(enum.Enum):
     OPERATIONAL = 3
 
 
-class DataTypeDescrpitor:
+class DataTypeDescriptor:
     _default = DataType.ALL
 
     def __set_name__(self, owner, name):
@@ -51,7 +51,7 @@ class DataTypeDescrpitor:
 class GetRequest(BaseModel[pb.GetRequest]):
     prefix: PathDescriptor = PathDescriptor()
     paths: Paths = field(default=Paths())
-    type: DataTypeDescrpitor = DataTypeDescrpitor()
+    type: DataTypeDescriptor = DataTypeDescriptor()
     encoding: EncodingDescriptor = EncodingDescriptor()
     models: list[ModelData] = field(default_factory=list)
     extensions: list[ext_pb2.Extension] = field(default_factory=list)

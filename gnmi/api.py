@@ -177,13 +177,11 @@ async def aget(
 
     Usage::
 
-        >>> import asyncio
-        >>> responses = asyncio.run(aget("veos1:6030", ["/system/config"],
-        ...     auth=("admin", "p4ssw0rd")))
-        >>> for n in responses:
-        ...     for upd in n.updates:
+        >>> async for notif in aget("veos1:6030", ["/system/config"],
+        ...     auth=("admin", "p4ssw0rd")):
+        ...     for upd in notif.updates:
         ...         print(upd.path, upd.val)
-        ...     for path in n.deletes:
+        ...     for path in notif.deletes:
         ...         print(str(path))
     """
     async with AsyncSession(
@@ -324,15 +322,15 @@ async def asubscribe(
 ) -> AsyncIterable[Notification]:
     """
     Async subscribe to updates from target
+
     Usage::
-        >>> import asyncio
-        >>> responses = asyncio.run(asubscribe("veos1:6030", ["/system/processes/process"],
-        ...     auth=("admin", "p4ssw0rd")))
-        ...
-        >>> for n in responses:
-        ...     for upd in n.updates:
+
+        >>> async for notif in asubscribe("veos1:6030",
+        ...     ["/system/processes/process"],
+        ...     auth=("admin", "p4ssw0rd")):
+        ...     for upd in notif.updates:
         ...         print(upd.path, upd.val)
-        ...     for path in n.deletes:
+        ...     for path in notif.deletes:
         ...         print(str(path))
     """
     async with AsyncSession(
