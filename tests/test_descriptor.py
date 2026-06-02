@@ -26,6 +26,69 @@ def test_enum_descriptor():
     assert t.value == TestEnum.B
 
 
+def test_enum_descriptor_invalid_type_raises():
+    class TestEnum(enum.Enum):
+        A = 0
+
+    @dataclass
+    class TestEnumDescriptor:
+        value: Enum[TestEnum] = Enum(default=TestEnum.A)
+
+    import pytest
+
+    with pytest.raises(TypeError):
+        TestEnumDescriptor(value=3.14)
+
+
+def test_duration_descriptor_with_timedelta():
+    import datetime
+    from gnmi.models.descriptor import Duration
+
+    @dataclass
+    class Timed:
+        dur: Duration = Duration(default=0)
+
+    t = Timed(dur=datetime.timedelta(seconds=5))
+    assert t.dur == 5_000_000_000
+
+
+def test_duration_descriptor_with_string():
+    from gnmi.models.descriptor import Duration
+
+    @dataclass
+    class Timed:
+        dur: Duration = Duration(default=0)
+
+    t = Timed(dur="1s")
+    assert t.dur == 1_000_000_000
+
+
+def test_duration_descriptor_with_int():
+    from gnmi.models.descriptor import Duration
+
+    @dataclass
+    class Timed:
+        dur: Duration = Duration(default=0)
+
+    t = Timed(dur=500)
+    assert t.dur == 500
+
+
+def test_data_type_descriptor_with_string():
+    from gnmi.models.get import DataType, GetRequest
+
+    gr = GetRequest(paths=["/a"], type="config")
+    assert gr.type == DataType.CONFIG
+
+
+def test_data_type_descriptor_invalid_string_raises():
+    from gnmi.models.get import GetRequest
+    import pytest
+
+    with pytest.raises(TypeError, match="invalid data type"):
+        GetRequest(paths=["/a"], type="bogus")
+
+
 # def test_listof_descriptors():
 #     class TestEnum(enum.Enum):
 #         A = 0

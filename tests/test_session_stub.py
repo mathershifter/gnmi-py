@@ -193,6 +193,84 @@ def test_session_requires_tls_or_insecure():
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# TLS context branches (T9)
+# ---------------------------------------------------------------------------
+
+
+def test_tls_config_context_with_ca_cert():
+    import ssl
+    from unittest import mock
+    from gnmi.tls import TLSConfig
+
+    tls = TLSConfig(ca_cert=b"ca-data", client_cert=None, client_key=None)
+    with mock.patch.object(ssl, "create_default_context") as mock_ctx:
+        tls.context
+    mock_ctx.assert_called_once_with(cadata=b"ca-data")
+
+
+def test_tls_config_context_no_verify():
+    from gnmi.tls import TLSConfig
+
+    tls = TLSConfig(ca_cert=None, client_cert=None, client_key=None, no_verify=True)
+    ctx = tls.context
+    assert ctx.check_hostname is False
+
+
+def test_tls_config_context_default():
+    import ssl
+    from unittest import mock
+    from gnmi.tls import TLSConfig
+
+    tls = TLSConfig(ca_cert=None, client_cert=None, client_key=None)
+    with mock.patch.object(ssl, "create_default_context") as mock_ctx:
+        tls.context
+    mock_ctx.assert_called_once_with()
+
+
+# ---------------------------------------------------------------------------
+# Integration gaps (T10)
+# ---------------------------------------------------------------------------
+
+
+def test_set_then_get_round_trip(session, stub_server):
+    session.set(updates=[("/x/y", "round-trip-val")])
+    resp = session.get(["/x/y"])
+    upd = resp.notifications[0].updates[0]
+    assert upd.value.value == "round-trip-val"
+
+
+def test_session_get_multi_path(session):
+    resp = session.get(["/a", "/b", "/c"])
+    paths = []
+    for n in resp.notifications:
+        for u in n.updates:
+            paths.append(str(u.path))
+    assert set(paths) == {"/a", "/b", "/c"}
+
+
+def test_session_set_with_prefix(session, stub_server):
+    session.set(prefix="/system", updates=[("/config/hostname", "new")])
+    req = stub_server.servicer.last_set_request
+    assert req.prefix.elem[0].name == "system"
+
+
+def test_session_context_manager_closes_channel(stub_target):
+    with Session(stub_target, insecure=True) as sess:
+        sess.capabilities()
+        channel = sess._channel
+    # After exiting the context manager, the channel should be closed.
+    # gRPC channels don't expose an is_closed property, but calling
+    # an RPC on a closed channel raises.
+    with pytest.raises(Exception):
+        list(channel.unary_unary("/gnmi.gNMI/Capabilities")(b""))
+
+
+# ---------------------------------------------------------------------------
+# Stream-side error (AUDIT.md #6)
+# ---------------------------------------------------------------------------
+
+
 def test_session_subscribe_propagates_stream_error(session, stub_server):
     """A non-OK status mid-stream must surface as grpc.RpcError on the
     next yield, not silently terminate."""

@@ -96,3 +96,33 @@ def test_subscribe_response_error_decode():
         )
         assert decoded.error is not None
         assert decoded.error.code == 3
+
+
+# ---------------------------------------------------------------------------
+# SubscriptionList.decode round-trip (T6)
+# ---------------------------------------------------------------------------
+
+
+def test_subscription_list_decode_round_trip():
+    from gnmi.models.encoding import Encoding
+
+    orig = SubscriptionList(
+        subscriptions=[
+            Subscription(path="/a"),
+            Subscription(path="/b", mode="on-change"),
+        ],
+        prefix="/system",
+        mode=SubscriptionListMode.ONCE,
+        encoding=Encoding.JSON,
+        qos=5,
+        allow_aggregation=True,
+        updates_only=True,
+    )
+    encoded = orig.encode()
+    decoded = SubscriptionList.decode(encoded)
+    assert decoded.mode == SubscriptionListMode.ONCE
+    assert decoded.encoding == Encoding.JSON
+    assert decoded.qos == 5
+    assert decoded.allow_aggregation is True
+    assert decoded.updates_only is True
+    assert len(list(decoded.subscriptions)) == 2

@@ -56,6 +56,26 @@ def test_target_factory():
             assert have.encode() == want
 
 
+def test_target_address_property():
+    t = Target(hostaddr="r1", port=6030)
+    assert t.address == "r1:6030"
+
+
+def test_target_address_property_missing_port_raises():
+    import pytest
+
+    t = Target(hostaddr="r1", port=0)
+    with pytest.raises(ValueError, match="missing port"):
+        _ = t.address
+
+
+def test_target_factory_invalid_type_raises():
+    import pytest
+
+    with pytest.raises(TypeError):
+        target_factory(12345)
+
+
 def test_split_addr_port():
     tests = [
         (

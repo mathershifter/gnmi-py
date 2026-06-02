@@ -162,6 +162,59 @@ def test_path_string_round_trip_preserves_backslash_in_key_value():
     assert Path.from_str(str(original)) == original
 
 
+# ---------------------------------------------------------------------------
+# Path.is_empty (T9)
+# ---------------------------------------------------------------------------
+
+
+def test_path_is_empty_true():
+    assert Path(elem=[]).is_empty()
+
+
+def test_path_is_empty_false_with_elems():
+    assert not Path(elem=[PathElem(name="a")]).is_empty()
+
+
+def test_path_is_empty_false_with_origin():
+    assert not Path(elem=[], origin="oc").is_empty()
+
+
+def test_path_is_empty_false_with_target():
+    assert not Path(elem=[], target="r1").is_empty()
+
+
+# ---------------------------------------------------------------------------
+# Path.append error paths (T9)
+# ---------------------------------------------------------------------------
+
+
+def test_path_append_different_origin_raises():
+    import pytest
+
+    with pytest.raises(ValueError, match="origin"):
+        Path(elem=[], origin="oc").append(Path(elem=[], origin="cli"))
+
+
+def test_path_append_different_target_raises():
+    import pytest
+
+    with pytest.raises(ValueError, match="target"):
+        Path(elem=[], target="r1").append(Path(elem=[], target="r2"))
+
+
+def test_path_append_force_ignores_mismatch():
+    result = Path(elem=[], origin="oc").append(
+        Path(elem=[PathElem(name="x")], origin="cli"), force=True
+    )
+    assert result.origin == "oc"
+    assert len(result.elem) == 1
+
+
+# ---------------------------------------------------------------------------
+# Path.__add__ / __truediv__
+# ---------------------------------------------------------------------------
+
+
 def test_path_add():
     tests = [
         (

@@ -189,6 +189,127 @@ def test_config_file_yaml_supported(stub_server, tmp_path):
     assert payload["updates"][0]["path"] == "/a"
 
 
+# ---------------------------------------------------------------------------
+# CLI flag coverage (T7)
+# ---------------------------------------------------------------------------
+
+
+def test_cli_format_json_long_form(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--format", "json", "--insecure", "-t", stub_server.target, "capabilities"],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output.strip())
+    assert "gnmi_version" in payload
+
+
+def test_cli_get_encoding_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "get", "--encoding", "proto", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_get_prefix_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "get", "--prefix", "/system", "/config/hostname"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_get_get_type_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "get", "--get-type", "config", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_get_no_prefix_target_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "get", "--no-prefix-target", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output.strip().splitlines()[0])
+    assert payload["target"] == ""
+
+
+def test_cli_subscribe_submode_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "--submode", "on-change", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_subscribe_interval_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "--interval", "500ms", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_subscribe_heartbeat_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "--heartbeat", "30s", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_subscribe_aggregate_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "--aggregate", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_subscribe_suppress_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "--suppress", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_subscribe_qos_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--json", "--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "--qos", "10", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_subscribe_detail_flag(stub_server):
+    result = CliRunner().invoke(
+        cli,
+        ["--insecure", "-t", stub_server.target, "subscribe", "--mode", "once", "--detail", "/a"],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_debug_grpc_flag(stub_server):
+    import os
+
+    result = CliRunner().invoke(
+        cli,
+        ["--debug-grpc", "--insecure", "-t", stub_server.target, "capabilities"],
+    )
+    assert result.exit_code == 0, result.output
+    assert os.environ.get("GRPC_TRACE") == "all"
+
+
+# ---------------------------------------------------------------------------
+# --config FILE — explicit overrides for rc defaults; YAML or TOML
+# ---------------------------------------------------------------------------
+
+
 def test_cli_flag_overrides_config_file_and_rc(stub_server, tmp_path):
     """Explicit --insecure on the command line wins, regardless of
     `insecure = false` in the rc / config layers."""
