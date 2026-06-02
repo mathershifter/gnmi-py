@@ -47,11 +47,6 @@ dev = [
 [project.scripts]
 gnmip = "gnmi:entry.main"
 
-# [tool.setuptools_scm]
-[tool.setuptools.dynamic]
-version = {attr = "gnmi.__version__"}
-
-
 [tool.pytest.ini_options]
 junit_family = "xunit2"
 filterwarnings = [
