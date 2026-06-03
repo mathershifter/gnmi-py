@@ -163,7 +163,7 @@ class _StubServer:
 @pytest.fixture
 def stub_server():
     servicer = StubGNMIServicer()
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
     gnmi_pb2_grpc.add_gNMIServicer_to_server(servicer, server)
     port = server.add_insecure_port("127.0.0.1:0")
     server.start()

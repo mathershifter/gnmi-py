@@ -11,7 +11,7 @@ import os
 @dataclass
 class Env:
     GNMIP_RC_PATH: list[Path] = field(default_factory=lambda: [Path.home() / ".gnmirc"])
-    GNMIP_TARGET: str = ""
+    GNMIP_TARGET: list[str] = field(default_factory=list)
     GNMIP_USER: str = "admin"
     GNMIP_PASS: str = ""
     GNMIP_NO_DEPRECATED: bool = False

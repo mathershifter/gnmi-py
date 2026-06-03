@@ -101,7 +101,7 @@ def _build_tls_config(
     )
 
 
-def _new_session(ctx: click.Context) -> AsyncSession:
+def _new_session(ctx: click.Context, target: str) -> AsyncSession:
     o = ctx.obj
     metadata: dict[str, str] = {}
     if o["username"]:
@@ -120,7 +120,7 @@ def _new_session(ctx: click.Context) -> AsyncSession:
         grpc_options["server_host_override"] = o["host_override"]
 
     return AsyncSession(
-        o["target"],
+        target=target,
         metadata=metadata,
         insecure=o["insecure"],
         tls=tls,
@@ -157,7 +157,7 @@ class Encoding(enum.Enum):
     ASCII = "ascii"
     JSON_IETF = "json-ietf"
 
-
+ 
 class Formatter(enum.Enum):
     PRETTY = "pretty"
     JSON = "json"
@@ -175,7 +175,9 @@ class Formatter(enum.Enum):
 @click.option(
     "--target",
     "-t",
-    default=env.GNMIP_TARGET,
+    multiple=True,
+    type=str,
+    default=[env.GNMIP_TARGET],
     help="gNMI target address (host:port). Can also be set via the config file.",
 )
 @click.option(
@@ -266,12 +268,18 @@ def cli(ctx: click.Context, **kwargs) -> None:
 async def capabilities(ctx: click.Context) -> None:
     fmt = ctx.obj["format"]
 
-    async with _new_session(ctx) as sess:
-        cap = await sess.capabilities()
-        if fmt == Formatter.PRETTY:
-            PrettyCapabilities().send(cap)
-        else:
-            JsonCapabilities().send(cap)
+    async def _run(target: str) -> None:
+        async with _new_session(ctx, target) as sess:
+            cap = await sess.capabilities()
+            if fmt == Formatter.PRETTY:
+                PrettyCapabilities().send(cap)
+            else:
+                JsonCapabilities().send(cap)
+
+    tasks = []
+    for target in ctx.obj["target"]:
+        tasks.append(_run(target))
+    await asyncio.gather(*tasks)
 
 
 @cli.command()
@@ -301,25 +309,32 @@ async def capabilities(ctx: click.Context) -> None:
 async def get(
     ctx: click.Context, paths, encoding, prefix, no_prefix_target, get_type
 ) -> None:
-    prefix_path = _build_prefix(
-        prefix,
-        ctx.obj["target"],
-        no_prefix_target,
-    )
-    fmt = ctx.obj["format"]
-
-    async with _new_session(ctx) as sess:
-        rsp = await sess.get(
-            paths=[p for p in paths],
-            prefix=prefix_path,
-            encoding=encoding.value,
-            data_type=get_type,
+    
+    async def _run(target: str) -> None:
+        prefix_path = _build_prefix(
+            prefix,
+            target,
+            no_prefix_target,
         )
-        for notif in rsp.notifications:
-            if fmt == Formatter.PRETTY:
-                PrettyNotification().send(notif)
-            else:
-                JsonNotification().send(notif)
+        fmt = ctx.obj["format"]
+        async with _new_session(ctx, target) as sess:
+            rsp = await sess.get(
+                paths=[p for p in paths],
+                prefix=prefix_path,
+                encoding=encoding.value,
+                data_type=get_type,
+            )
+            for notif in rsp.notifications:
+                if fmt == Formatter.PRETTY:
+                    PrettyNotification().send(notif)
+                else:
+                    JsonNotification().send(notif)
+
+    tasks = []
+    for target in ctx.obj["target"]:
+        tasks.append(_run(target))
+
+    await asyncio.gather(*tasks)
 
 
 @cli.command()
@@ -384,7 +399,7 @@ async def subscribe(
     qos,
     detail,
 ) -> None:
-    prefix_path = _build_prefix(prefix, ctx.obj["target"], no_prefix_target)
+    
     fmt = ctx.obj["format"]
 
     def _ns(d: str) -> int:
@@ -401,33 +416,40 @@ async def subscribe(
         for p in paths
     ]
 
-    async with _new_session(ctx) as sess:
-        try:
-            async for resp in sess.subscribe(
-                subscriptions=subs,
-                prefix=prefix_path,
-                encoding=encoding.value,
-                mode=mode,
-                qos=qos,
-                aggregate=aggregate,
-            ):
-                if resp.sync_response:
-                    if mode == "once":
-                        return
-                    continue
+    async def _run(target: str) -> None:
+        prefix_path = _build_prefix(prefix, target, no_prefix_target)
+        async with _new_session(ctx, target) as sess:
+            try:
+                async for resp in sess.subscribe(
+                    subscriptions=subs,
+                    prefix=prefix_path,
+                    encoding=encoding.value,
+                    mode=mode,
+                    qos=qos,
+                    aggregate=aggregate,
+                ):
+                    if resp.sync_response:
+                        if mode == "once":
+                            return
+                        continue
 
-                if fmt == Formatter.PRETTY:
-                    if detail:
-                        PrettyNotification().send(resp.update)
+                    if fmt == Formatter.PRETTY:
+                        if detail:
+                            PrettyNotification().send(resp.update)
+                        else:
+                            StreamingNotification().send(resp.update)
                     else:
-                        StreamingNotification().send(resp.update)
-                else:
-                    JsonNotification().send(resp.update)
-        except grpc.RpcError as e:
-            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
-                return
-            raise
-
+                        JsonNotification().send(resp.update)
+            except grpc.RpcError as e:
+                if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                    return
+                raise
+    
+    tasks = []
+    for target in ctx.obj["target"]:
+        tasks.append(_run(target))
+    
+    await asyncio.gather(*tasks)
 
 @cli.command()
 @click.pass_context
