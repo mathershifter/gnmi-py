@@ -9,7 +9,6 @@ from gnmi.models.model_data import ModelData
 from gnmi.models.capabilities import CapabilityResponse
 from gnmi.util import get_gnmi_constant
 
-# gnmic -a localhost:6030 -u admin --insecure capabilities --format json | jq '.["supported-models"] | map(select(.name | startswith("arista") | not))'
 supported_models = b"""[
   {
     "name": "openconfig-mpls-types",

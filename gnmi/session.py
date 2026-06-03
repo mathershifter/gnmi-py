@@ -119,10 +119,8 @@ class Session:
             openconfig-system-logging 0.3.1
             openconfig-messages 0.0.1
             openconfig-platform-types 1.0.0
-            arista-system-augments
             openconfig-if-types 0.2.1
             openconfig-acl 1.0.2
-            arista-intf-augments
             openconfig-pf-srte 0.1.1
             openconfig-bgp 6.0.0
             ...
